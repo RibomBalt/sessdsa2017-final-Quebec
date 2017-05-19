@@ -6,23 +6,27 @@ DIM = (-900000, 900000, 0, 1000000)
 TMAX = 800000
 # 球的初始坐标(x,y)，在west中间
 BALL_POS = (DIM[0], (DIM[3] - DIM[2]) // 2)
-# 球的初速度，(vx,vy)，单位"p/t"，向西北飞行
+# 球的初速度，(vx,vy)，单位"p/t"，向东北飞行
 BALL_V = (1000, 1000)
 # 球拍的生命值，100个回合以上
 RACKET_LIFE = 100000
-# 移动距离扣减生命值的除法系数（LIFE=0-1000)
-FACTOR_DISTANCE = 1000
-# 加速则扣减速度除以系数结果的平方（LIFE=0-2500)
-FACTOR_SPEED = 20
+# 迎球和跑位扣减距离除以系数的平方（LIFE=0-1000)
+FACTOR_DISTANCE = 3000
+# 加速则扣减速度除以系数结果的平方（LIFE=0-400)
+FACTOR_SPEED = 50
 # 游戏方代码
 PL = {'West': 'W', 'East': 'E'}
 # 游戏结束原因代码
 RS = {'invalid_bounce': 'B', 'miss_ball': 'M', 'life_out': 'L', 'time_out': 'T'}
 
 
+def sign(n):  # 返回n的符号，小于0为-1，否则为1
+    return -1 if n < 0 else 1
+
+
 class Vector:  # 矢量
     def __init__(self, x, y=None):
-        if y is None:
+        if y is None and isinstance(x, tuple):
             self.x, self.y = x
         else:
             self.x, self.y = x, y
@@ -30,8 +34,8 @@ class Vector:  # 矢量
     def __add__(self, other):
         return self.__class__(self.x + other.x, self.y + other.y)
 
-    def __eq__(self, other):
-        return self.x == other.x and self.y == other.y
+    def __eq__(self, other):  # 判定相等，考虑误差+／-1
+        return abs(self.x - other.x) <= 1 and abs(self.y - other.y) <= 1
 
     def __str__(self):
         return "<%s,%s>" % (self.x, self.y)
@@ -98,7 +102,7 @@ class Ball:  # 球
 
 class RacketAction:  # 球拍动作
     def __init__(self, tick, bat_vector, acc_vector, run_vector):
-        self.t0 = tick  # tick时刻的动作，都是一维矢量，仅在y轴方向
+        # self.t0 = tick  # tick时刻的动作，都是一维矢量，仅在y轴方向
         self.bat = bat_vector  # t0~t1迎球的动作矢量（移动方向及距离）
         self.acc = acc_vector  # t1触球加速矢量（加速的方向及速度）
         self.run = run_vector  # t1~t2跑位的动作矢量（移动方向及距离）
@@ -108,10 +112,11 @@ class Racket:  # 球拍
     def __init__(self, side, pos):  # 选边'West'／'East'和位置
         self.side, self.pos = side, pos
         self.life = RACKET_LIFE
-        self.name = self.play = self.action = self.datastore = None
+        self.name = self.serve = self.play = self.action = self.datastore = None
 
-    def bind_play(self, name, play):  # 绑定玩家名称和play函数
+    def bind_play(self, name, serve, play):  # 绑定玩家名称和serve, play函数
         self.name = name
+        self.serve = serve
         self.play = play
 
     def set_action(self, action):  # 设置球拍动作
@@ -120,19 +125,25 @@ class Racket:  # 球拍
     def set_datastore(self, ds):  # 设置数据存储，一个字典
         self.datastore = ds
 
-    def update_pos_bat(self):
-        self.pos.y += self.action.bat
-        # 减少生命值
-        self.life -= abs(self.action.bat) / FACTOR_DISTANCE
+    def get_velocity(self):
+        # 球拍的全速是球X方向速度，按照体力值比例下降，当体力值下降到55%，将出现死角
+        return int((self.life / RACKET_LIFE) * BALL_V[1])
 
-    def update_pos_run(self):
-        self.pos.y += self.action.run
+    def update_pos_bat(self, tick_step):
+        # 如果指定迎球的距离大于最大速度的距离，则采用最大速度距离
+        self.pos.y += sign(self.action.bat) * min(abs(self.action.bat), self.get_velocity() * tick_step)
         # 减少生命值
-        self.life -= abs(self.action.run) / FACTOR_DISTANCE
+        self.life -= int((abs(self.action.bat) / FACTOR_DISTANCE) ** 2)
+
+    def update_pos_run(self, tick_step):
+        # 如果指定跑位的距离大于最大速度的距离，则采用最大速度距离
+        self.pos.y += sign(self.action.run) * min(abs(self.action.run), self.get_velocity() * tick_step)
+        # 减少生命值
+        self.life -= int((abs(self.action.run) / FACTOR_DISTANCE) ** 2)
 
     def update_acc(self):
         # 按照给球加速度的指标减少生命值
-        self.life -= (abs(self.action.acc) / FACTOR_SPEED) ** 2
+        self.life -= int((abs(self.action.acc) / FACTOR_SPEED) ** 2)
 
 
 class TableData:  # 球桌信息，player计算用
@@ -151,28 +162,30 @@ class RacketData:  # 球拍信息，记录日志用
 
 
 class BallData:  # 球的信息，记录日志用
-    def __init__(self, ball):
-        self.pos, self.velocity = copy.copy(ball.pos), copy.copy(ball.velocity)
+    def __init__(self, ball_or_pos, velocity=None):
+        if velocity is None:
+            self.pos, self.velocity = copy.copy(ball_or_pos.pos), \
+                                      copy.copy(ball_or_pos.velocity)
+        else:
+            self.pos, self.velocity = ball_or_pos, velocity
 
 
 class Table:  # 球桌
     def __init__(self):
         # 桌面坐标系的范围，单位"pace"
         self.xmin, self.xmax, self.ymin, self.ymax = DIM
-        self.tick = 0  # 当前的时刻tick
-        self.ball = Ball(DIM, Vector(BALL_POS), Vector(BALL_V))  # 球的初始化
+        self.tick = 0
+        self.ball = None
         # tick增加的步长
-        self.tick_step = (self.xmax - self.xmin) / self.ball.velocity.x
+        self.tick_step = (self.xmax - self.xmin) // BALL_V[0]  # 这是水平方向速度
 
         # 球拍，位置是球拍坐标系
         self.players = {'West': Racket('West', Position(self.xmin, self.ymax // 2)),
                         'East': Racket('East', Position(self.xmax, self.ymax // 2))}
-        self.side = 'East'  # 球的初始位置在西侧的中央
-        self.op_side = 'West'
+        self.side = 'West'  # 球的初始位置在西侧的中央，发球的首先是West
+        self.op_side = 'East'
         self.players['West'].set_action(RacketAction(self.tick, 0, 0, 0))
-        self.players['West'].set_datastore(dict())
         self.players['East'].set_action(RacketAction(self.tick, 0, 0, 0))
-        self.players['East'].set_datastore(dict())
 
         # 是否结束
         self.finished = False
@@ -181,6 +194,15 @@ class Table:  # 球桌
 
     def change_side(self):  # 换边
         self.side, self.op_side = self.op_side, self.side
+
+    def serve(self):  # 发球，始终是West发球
+        self.tick = 0  # 当前的时刻tick
+        player = self.players[self.side]  # 现在side是West
+        pos_y, velocity_y = player.serve(player.datastore)  # 只提供y方向的位置和速度
+        self.ball = Ball(DIM, Position(BALL_POS[0], pos_y),
+                         Vector(BALL_V[0], velocity_y))  # 球的初始化
+        self.change_side()  # 换边迎球
+        return
 
     def time_run(self):  # 球跑一趟
         # t0时刻调用在t1时刻击球的一方
@@ -201,8 +223,8 @@ class Table:  # 球桌
                      'life': player.life}
         dict_op_side = {'position': copy.copy(op_player.pos),
                         'life': op_player.life,
-                        'accelerate': op_player.action.acc,
-                        'run_vector': op_player.action.run}
+                        'accelerate': -1 if op_player.action.acc < 0 else 1,
+                        'run_vector': -1 if op_player.action.run < 0 else 1}
         dict_ball = {'position': copy.copy(self.ball.pos),
                      'velocity': copy.copy(self.ball.velocity)}
         # 调用，返回迎球方的动作
@@ -212,7 +234,7 @@ class Table:  # 球桌
         player.set_action(player_action)
 
         # 执行迎球方的两个动作：迎球和加速
-        player.update_pos_bat()
+        player.update_pos_bat(self.tick_step)
         if not (player.pos == self.ball.pos):
             # 没接上球
             print(player.pos, self.ball.pos)
@@ -231,7 +253,7 @@ class Table:  # 球桌
         self.ball.bounce_racket()  # 球在球拍反弹
 
         # 执行跑位方的一个动作：跑位
-        op_player.update_pos_run()
+        op_player.update_pos_run(self.tick_step)
         if op_player.life <= 0:
             # 生命值用尽，失败
             self.finished = True
@@ -248,6 +270,7 @@ class Table:  # 球桌
             return
 
         self.change_side()  # 换边迎球
+        return
 
 
 class LogEntry:

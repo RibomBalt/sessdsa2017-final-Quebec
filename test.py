@@ -113,6 +113,7 @@ def op_acc(tb, ticks):
     # Y 没有墙壁时到达的位置
     Y = -tb.ball.velocity * ticks + tb.ball.pos.y
     count = Y // tb.ball.extent[3]
+
     return tb.ball.velocity * ((count + 1) % 2 * 2 - 1)-111 # 我没看明白之前的数据怎么调用？？？这里应该减之前的vy？？
 
 # 这里是杨帆的处理方式，因为所有点都是整数，那么假设墙壁不存在

@@ -41,8 +41,8 @@ ALL_CARDS = [(CARD_SPIN, CARD_SPIN_PARAM), (CARD_DSPR, CARD_DSPR_PARAM), (CARD_I
              (CARD_DECL, CARD_DECL_PARAM), (CARD_TLPT, CARD_TLPT_PARAM), (CARD_AMPL, CARD_AMPL_PARAM)]
 
 
-
-def ball_flyto(tb, ticks):  # 球运动，更新位置，并返回触壁次数和路径经过的道具（元组）
+# 球运动，更新位置，并返回触壁次数
+def ball_fly_to(tb, ticks):
     # x方向的位置
     tb.ball.pos.x += tb.ball.velocity.x * ticks
     # Y 没有墙壁时到达的位置
@@ -58,7 +58,7 @@ def ball_flyto(tb, ticks):  # 球运动，更新位置，并返回触壁次数�
         tb.ball.velocity.y = tb.ball.velocity.y * ((count + 1) % 2 * 2 - 1)
         return abs(count)
 
-def ball_v_range(tb,ticks):
+def ball_v_range(tb, ticks):
     # v0,v1,v2,v3是速度的范围边界
     v0 = (3 * tb.ball.extent[3] - tb.ball.pos.y) / ticks
     v1 = (1 * tb.ball.extent[3] - tb.ball.pos.y) / ticks
@@ -106,3 +106,8 @@ def life_consume(tb):
     tb.ball.update_velocity(player.action.acc, tb.active_card)
     return player.life
 
+def op_acc(tb, ticks):
+    # Y 没有墙壁时到达的位置
+    Y = -tb.ball.velocity * ticks + tb.ball.pos.y
+    count = Y // tb.ball.extent[3]
+    return tb.ball.velocity * ((count + 1) % 2 * 2 - 1)-111 # 我没看明白之前的数据怎么调用？？？这里应该减之前的vy？？

@@ -30,12 +30,13 @@ def ball_v_range(tb:TableData, ticks:int = 3600):
     :param tb: TableData
     :param ticks: 一次经过的时间
     :return: 
+    # >>> ball_v_range(TableData(0, 3600, 'left', 'right', {} ,0), 3600)
     """
     # v0,v1,v2,v3是速度的范围边界
-    v0 = (3 * tb.ball.extent[3] - tb.ball.pos.y) // ticks
-    v1 = (1 * tb.ball.extent[3] - tb.ball.pos.y) // ticks
+    v0 = (3 * (DIM[3] - DIM[2]) - tb.ball.pos.y) // ticks
+    v1 = (1 * (DIM[3] - DIM[2]) - tb.ball.pos.y) // ticks
     v2 = (0 - tb.ball.pos.y) // ticks
-    v3 = (-2 * tb.ball.extent[3] - tb.ball.pos.y) // ticks
+    v3 = (-2 * (DIM[3] - DIM[2]) - tb.ball.pos.y) // ticks
     return v0, v1, v2, v3
 
 

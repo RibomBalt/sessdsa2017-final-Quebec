@@ -5,26 +5,26 @@ from table import *
 # 球运动，更新位置，并返回触壁次数
 def ball_fly_to(tb, ticks):
     # x方向的位置
-    tb.ball.pos.x += tb.ball.velocity.x * ticks
+    tb.ball['position'].x += tb.ball['velocity'].x * ticks
     # Y 没有墙壁时到达的位置
-    Y = tb.ball.velocity.y * ticks + tb.ball.pos.y
+    Y = tb.ball['velocity'].y * ticks + tb.ball['position'].y
     if Y % (DIM[3] - DIM[2]) != 0:  # 未在边界
         count = Y // (DIM[3] - DIM[2])
-        tb.ball.pos.y = (Y - count * (DIM[3] - DIM[2]) * (1 - 2 * (count % 2)) + (DIM[3] - DIM[2]) * (count % 2)
-        tb.ball.velocity.y = tb.ball.velocity.y * ((count + 1) % 2 * 2 - 1)
+        tb.ball['position'].y = (Y - count * (DIM[3] - DIM[2]) * (1 - 2 * (count % 2)) + (DIM[3] - DIM[2]) * (count % 2))
+        tb.ball['velocity'].y = tb.ball['velocity'].y * ((count + 1) % 2 * 2 - 1)
         return abs(count)
     else:  # 恰好在边界
-        count = (Y // (DIM[3] - DIM[2]) if (Y > 0) else (1 - Y // (DIM[3] - DIM[2]))
-        tb.ball.pos.y = Y % (2 * (DIM[3] - DIM[2]))
-        tb.ball.velocity.y = tb.ball.velocity.y * ((count + 1) % 2 * 2 - 1)
+        count = (Y // (DIM[3] - DIM[2]) if (Y > 0) else (1 - Y // (DIM[3] - DIM[2])))
+        tb.ball['position'].y = Y % (2 * (DIM[3] - DIM[2]))
+        tb.ball['velocity'].y = tb.ball['velocity'].y * ((count + 1) % 2 * 2 - 1)
         return abs(count)
 
 def ball_v_range(tb, ticks):
     # v0,v1,v2,v3是速度的范围边界
-    v0 = (3 * (DIM[3] - DIM[2]) - tb.ball.pos.y) / ticks
-    v1 = (1 * (DIM[3] - DIM[2]) - tb.ball.pos.y) / ticks
-    v2 = (0 - tb.ball.pos.y) / ticks
-    v3 = (-2 * (DIM[3] - DIM[2]) - tb.ball.pos.y) / ticks
+    v0 = (3 * (DIM[3] - DIM[2]) - tb.ball['position'].y) / ticks
+    v1 = (1 * (DIM[3] - DIM[2]) - tb.ball['position'].y) / ticks
+    v2 = (0 - tb.ball['position'].y) / ticks
+    v3 = (-2 * (DIM[3] - DIM[2]) - tb.ball['position'].y) / ticks
     return v0, v1, v2, v3
 
 
@@ -51,8 +51,8 @@ def life_consume(tb):
                     (-1 if op_player.action.acc < 0 else 1),
                     'run_vector': None if tb.active_card[1] == CARD_DSPR else
                     (-1 if op_player.action.run < 0 else 1)}
-    dict_ball = {'position': copy.copy(tb.ball.pos),
-                 'velocity': copy.copy(tb.ball.velocity)}
+    dict_ball = {'position': copy.copy(tb.ball['position']),
+                 'velocity': copy.copy(tb.ball['velocity'])}
     dict_card = {'card_tick': tb.card_tick,
                  'cards': copy.copy(tb.cards)}
     # 调用，返回迎球方的动作
@@ -69,10 +69,10 @@ def life_consume(tb):
 
 def op_acc(tb, ticks):
     # Y 没有墙壁时到达的位置
-    Y = -tb.ball.velocity * ticks + tb.ball.pos.y
+    Y = -tb.ball['velocity'] * ticks + tb.ball['position'].y
     count = Y // (DIM[3] - DIM[2])
 
-    return tb.ball.velocity * ((count + 1) % 2 * 2 - 1)-111 # 我没看明白之前的数据怎么调用？？？这里应该减之前的vy？？
+    return tb.ball['velocity'] * ((count + 1) % 2 * 2 - 1)-111 # 我没看明白之前的数据怎么调用？？？这里应该减之前的vy？？
 
 # 这里是杨帆的处理方式，因为所有点都是整数，那么假设墙壁不存在
 def yspeed2mirror(y_speed:int, o_axis:int):
@@ -92,6 +92,6 @@ def mirror2real(y_axis:int):
     :param y_axis: 镜像点y坐标
     :return: 真实点y坐标，范围0-1,000,000
     """
-    n_mirror, remain = divmod(y_axis, DIM[3])
+    n_mirror, remain = divmod(y_axis, DIM[3] - DIM[2])
     # n_mirror是穿过墙的数目
     return {0:remain, 1:DIM[3] - remain}[n_mirror % 2]

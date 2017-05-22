@@ -8,23 +8,23 @@ def ball_fly_to(tb, ticks):
     tb.ball.pos.x += tb.ball.velocity.x * ticks
     # Y 没有墙壁时到达的位置
     Y = tb.ball.velocity.y * ticks + tb.ball.pos.y
-    if Y % tb.ball.extent[3] != 0:  # 未在边界
-        count = Y // tb.ball.extent[3]
-        tb.ball.pos.y = (Y - count * tb.ball.extent[3]) * (1 - 2 * (count % 2)) + tb.ball.extent[3] * (count % 2)
+    if Y % (DIM[3] - DIM[2]) != 0:  # 未在边界
+        count = Y // (DIM[3] - DIM[2])
+        tb.ball.pos.y = (Y - count * (DIM[3] - DIM[2]) * (1 - 2 * (count % 2)) + (DIM[3] - DIM[2]) * (count % 2)
         tb.ball.velocity.y = tb.ball.velocity.y * ((count + 1) % 2 * 2 - 1)
         return abs(count)
     else:  # 恰好在边界
-        count = (Y // tb.ball.extent[3]) if (Y > 0) else (1 - Y // tb.ball.extent[3])
-        tb.ball.pos.y = Y % (2 * tb.ball.extent[3])
+        count = (Y // (DIM[3] - DIM[2]) if (Y > 0) else (1 - Y // (DIM[3] - DIM[2]))
+        tb.ball.pos.y = Y % (2 * (DIM[3] - DIM[2]))
         tb.ball.velocity.y = tb.ball.velocity.y * ((count + 1) % 2 * 2 - 1)
         return abs(count)
 
 def ball_v_range(tb, ticks):
     # v0,v1,v2,v3是速度的范围边界
-    v0 = (3 * tb.ball.extent[3] - tb.ball.pos.y) / ticks
-    v1 = (1 * tb.ball.extent[3] - tb.ball.pos.y) / ticks
+    v0 = (3 * (DIM[3] - DIM[2]) - tb.ball.pos.y) / ticks
+    v1 = (1 * (DIM[3] - DIM[2]) - tb.ball.pos.y) / ticks
     v2 = (0 - tb.ball.pos.y) / ticks
-    v3 = (-2 * tb.ball.extent[3] - tb.ball.pos.y) / ticks
+    v3 = (-2 * (DIM[3] - DIM[2]) - tb.ball.pos.y) / ticks
     return v0, v1, v2, v3
 
 
@@ -70,7 +70,7 @@ def life_consume(tb):
 def op_acc(tb, ticks):
     # Y 没有墙壁时到达的位置
     Y = -tb.ball.velocity * ticks + tb.ball.pos.y
-    count = Y // tb.ball.extent[3]
+    count = Y // (DIM[3] - DIM[2])
 
     return tb.ball.velocity * ((count + 1) % 2 * 2 - 1)-111 # 我没看明白之前的数据怎么调用？？？这里应该减之前的vy？？
 

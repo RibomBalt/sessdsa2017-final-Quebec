@@ -1,6 +1,14 @@
-﻿文本指南/
+﻿﻿文本指南/
 .idea/
-# /_config.yml
+DS-T_idiot.bak
+DS-T_idiot.dat
+DS-T_idiot.dir
+[E.M]T_idiot-VS-T_idiot.bak
+[E.M]T_idiot-VS-T_idiot.dat
+[E.M]T_idiot-VS-T_idiot.dir
+[W.T]T_idiot-VS-T_idiot.bak
+[W.T]T_idiot-VS-T_idiot.dat
+[W.T]T_idiot-VS-T_idiot.dir
 __pycache__/
 DS-T_idiot.bak
 DS-T_idiot.dat

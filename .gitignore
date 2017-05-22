@@ -1,6 +1,6 @@
 ﻿文本指南/
 .idea/
-/_config.yml
+# /_config.yml
 __pycache__/
 DS-T_idiot.bak
 DS-T_idiot.dat

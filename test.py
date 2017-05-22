@@ -1,48 +1,6 @@
 # 从table中导入所有常量
 from table import *
 
-# # 桌面的坐标系，单位"pace"
-# DIM = (-900000, 900000, 0, 1000000)
-# # 最大时间，单位"tick"，每个回合3600tick，200回合
-# TMAX = 800000
-# # 球的初始坐标(x,y)，在west中间
-# BALL_POS = (DIM[0], (DIM[3] - DIM[2]) // 2)
-# # 球的初速度，(vx,vy)，单位"p/t"，向东北飞行
-# BALL_V = (1000, 1000)
-# # 球拍的生命值，100个回合以上
-# RACKET_LIFE = 100000
-# # 迎球和跑位扣减距离除以系数的平方（LIFE=0-10000)
-# FACTOR_DISTANCE = 10000
-# # 加速则扣减速度除以系数结果的平方（LIFE=0-400)
-# FACTOR_SPEED = 50
-# # 游戏方代码
-# PL = {'West': 'W', 'East': 'E'}
-# # 游戏结束原因代码
-# RS = {'invalid_bounce': 'B', 'miss_ball': 'M', 'life_out': 'L', 'time_out': 'T'}
-# # 道具出现频率每多少ticks出现一个道具
-# CARD_FREQ = 40000
-# # 道具出现的空间范围
-# CARD_EXTENT = (-800000, 800000, 100000, 900000)
-# # 道具箱的最大容量
-# MAX_CARDS = 3
-# # 球桌上最多道具
-# MAX_TABLE_CARDS = 10
-# # 卡牌代码
-# CARD_SPIN = 'SP'  # 旋转球：用于抵消被用道具方施加在球拍上的加速，使之正常反弹回来；param=0，增加的速度乘以parm
-# CARD_SPIN_PARAM = 0
-# CARD_DSPR = 'DS'  # 隐身术：隐藏被用道具方的位置和跑位方向1次；param=0，位置乘以parm，方向乘以parm
-# CARD_DSPR_PARAM = 0
-# CARD_INCL = 'IL'  # 补血包：给被用道具方补血（增加体力值）；param=2000，life加上param
-# CARD_INCL_PARAM = 2000
-# CARD_DECL = 'DL'  # 掉血包：给被用道具方减血（减少体力值）；param=2000，life减去param
-# CARD_DECL_PARAM = 2000
-# CARD_TLPT = 'TP'  # 瞬移术：被用道具方可以移动一段距离而不消耗体力值；param=250000，只作用在迎球阶段
-# CARD_TLPT_PARAM = 250000
-# CARD_AMPL = 'AM'  # 变压器：放大被用道具方的体力值损失；param=2；体力值损失增加1倍。
-# CARD_AMPL_PARAM = 2
-# ALL_CARDS = [(CARD_SPIN, CARD_SPIN_PARAM), (CARD_DSPR, CARD_DSPR_PARAM), (CARD_INCL, CARD_INCL_PARAM),
-#              (CARD_DECL, CARD_DECL_PARAM), (CARD_TLPT, CARD_TLPT_PARAM), (CARD_AMPL, CARD_AMPL_PARAM)]
-
 
 # 球运动，更新位置，并返回触壁次数
 def ball_fly_to(tb, ticks):

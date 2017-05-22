@@ -339,7 +339,7 @@ class Table:  # 球桌
         if self.card_tick >= CARD_FREQ:  # 判断道具计时器是不是到了，到了就放置随机道具到球桌上
             self.card_tick -= CARD_FREQ  # 重置计时器
             card_info = random.choice(ALL_CARDS)
-            self.cards.append(Card(card_info[0], card_info[1],
+            self.cards.append  card_info[0], card_info[1],
                                    Position(random.randint(CARD_EXTENT[0], CARD_EXTENT[1]),
                                             random.randint(CARD_EXTENT[2], CARD_EXTENT[3]))))
             # 桌上不超过MAX_TABLE_CARDS个道具

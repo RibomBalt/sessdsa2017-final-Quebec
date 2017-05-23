@@ -31,7 +31,9 @@ def play(tb:TableData, ds:dict) -> RacketAction:
     v_range = ball_v_range(tb.ball['velocity'].y)
     # 计算介于可行范围内的最小的目标v
 
-    target = min(v_range, key=lambda x:abs(x - tb.ball['velocity'].y)) - tb.ball['velocity'].y
+    min_index = v_range.index(min(v_range, key=lambda x: abs(x - tb.ball['velocity'].y)))
+    target = v_range[min_index] + 1 - 2 * (min_index % 2) - tb.ball['velocity'].y
+
     # 如果有道具，则对自己使用
     if tb.cards['cards']:
         side, item = 'SELF', tb.cards['cards'].pop(0)

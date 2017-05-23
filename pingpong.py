@@ -76,8 +76,8 @@ def race(west_name, west_serve, west_play, west_summarize,
 import os
 
 # 取得所有以T_开始文件名的算法文件名
-players = [f[:-3] for f in os.listdir('.') if os.path.isfile(f) and f[-3:] == '.py' and f[:2] == 'T_']
-
+# players = [f[:-3] for f in os.listdir('.') if os.path.isfile(f) and f[-3:] == '.py' and f[:2] == 'T_']
+players = ['T_Sider', 'T_Sider']
 for west_name in players:
     for east_name in players:
         exec('import %s as WP' % (west_name,))

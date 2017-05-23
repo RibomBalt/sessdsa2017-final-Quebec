@@ -32,7 +32,7 @@ bd = ball_data(tb)
 pd = player_data(tb)
 opd = op_player_data(tb)
 
-def ball_fly_to(bd):
+def ball_fly_to(bd:ball_data):
     """
     根据我方出射点坐标、出射速度，算出到达对方位置
     :param tb.step: 1800 tick
@@ -61,10 +61,10 @@ def ball_fly_to(bd):
         bd.pos_y = Y % (2 * height)
     # 计算并更新y轴速度
     bd.vel_y = bd.vel_y * ((count + 1) % 2 * 2 - 1)
-    return abs(count), ball_data
+    return abs(count), bd
 
 
-def ball_v_range(bd):
+def ball_v_range(bd:ball_data):
     """
     根据我方出射点坐标，算出y轴可取速度的边界值
     :param tb.step: 1800 tick
@@ -81,7 +81,7 @@ def ball_v_range(bd):
     return v0, v1, v2, v3
 
 
-def side_life_consume(pd, opd, tb, ds):
+def side_life_consume(pd:player_data, opd:op_player_data, tb:TableData, ds):
     """
     根据我方此次决策，算出迎球+加速+跑位的总体力消耗(考虑道具)
     :param player_data: 决策前迎球方的信息
@@ -128,10 +128,10 @@ def side_life_consume(pd, opd, tb, ds):
         param = CARD_TLPT_PARAM
     if abs(run_distance) - param > 0:
         pd.life -= (abs(run_distance) - param) ** 2 // FACTOR_DISTANCE ** 2
+    return pd.life
 
 
-
-def get_op_acc(bd):
+def get_op_acc(bd:ball_data):
     """
     根据对方打过来的球的速度位置，反推出跑位方（对方）加速度
     :param height: 乒乓球桌的宽度, DIM[3] - DIM[2]

@@ -24,6 +24,21 @@ def mirror2real(y_axis:int):
     # n_mirror是穿过墙的数目
     return {0:remain, 1:DIM[3] - remain}[n_mirror % 2]
 
+def ball_v_range(tb:TableData, ticks:int = 3600):
+    """
+    得到可以打到的速度范围
+    :param tb: TableData
+    :param ticks: 一次经过的时间
+    :return: 
+    # >>> ball_v_range(TableData(0, 3600, 'left', 'right', {} ,0), 3600)
+    """
+    # v0,v1,v2,v3是速度的范围边界
+    v0 = (3 * (DIM[3] - DIM[2]) - tb.ball.pos.y) // ticks
+    v1 = (1 * (DIM[3] - DIM[2]) - tb.ball.pos.y) // ticks
+    v2 = (0 - tb.ball.pos.y) // ticks
+    v3 = (-2 * (DIM[3] - DIM[2]) - tb.ball.pos.y) // ticks
+    return v0, v1, v2, v3
+
 
 def serve(ds):
     return BALL_POS[1], BALL_V[1]
@@ -36,4 +51,4 @@ def play(tb:TableData, ds:dict) -> RacketAction:
     :return: RacketAction，保存了这次的球拍移动的四项信息。
     """
     # return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, 0, 0)
-    pass
+    v_range = ball_v_range(tb)

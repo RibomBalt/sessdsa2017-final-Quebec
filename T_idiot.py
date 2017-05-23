@@ -11,5 +11,5 @@ def serve(ds):
 # tb为TableData类型的对象
 # ds为函数可以利用的存储字典
 # 函数需要返回一个RacketAction对象
-def play(tb, ds):
+def play(tb:TableData, ds) -> RacketAction:
     return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, 0, 0, None, None)

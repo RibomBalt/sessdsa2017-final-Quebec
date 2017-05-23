@@ -50,10 +50,10 @@ def ball_v_range(tb):
     """
     height = DIM[3] - DIM[2]
     # v0,v1,v2,v3是速度的范围边界:v0-v1,v2-v3可取
-    v0 = (3 * height - tb.ball['position'].y) / tb.step
-    v1 = (1 * height - tb.ball['position'].y) / tb.step
-    v2 = (0 - tb.ball['position'].y) / tb.step
-    v3 = (-2 * height - tb.ball['position'].y) / tb.step
+    v0 = (3 * height - tb.ball['position'].y) // tb.step
+    v1 = (1 * height - tb.ball['position'].y) // tb.step
+    v2 = (0 - tb.ball['position'].y) // tb.step
+    v3 = (-2 * height - tb.ball['position'].y) // tb.step
     return v0, v1, v2, v3
 
 

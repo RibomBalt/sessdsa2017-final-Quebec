@@ -8,6 +8,21 @@ from table import *
 def play(tb, ds):
     return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, 0, 0, None, None)
 
+class ball_data():
+    def __init__(self, tb):
+        self.pos_x = tb.ball['position'].x
+        self.pos_y = tb.ball['position'].y
+        self.vel_x = tb.ball['velocity'].x
+        self.vel_y = tb.ball['velocity'].y
+
+class player_data():
+    def __init__(self, tb):
+        self.life = tb.side["life"]
+
+class op_player_data():
+    def __init__(self, tb):
+        self.active_card = tb.op_side["active_card"]
+
 def ball_fly_to(tb):
     """
     根据我方出射点坐标、出射速度，算出到达对方位置
@@ -17,28 +32,28 @@ def ball_fly_to(tb):
     :param height: 乒乓球桌的宽度, DIM[3] - DIM[2]
     :return: 与桌碰撞次数
     """
-    # 首先取得球的信息
-    ball_data = tb.ball
+    # 创建ball_data类实例
+    balldata = ball_data(tb)
     # x方向的位置更新
     # tb.step 为 1800 tick
-    ball_data['position'].x += ball_data['velocity'].x * tb.step
+    balldata.pos_x += balldata.vel_x * tb.step
     # Y 为 没有墙壁时乒乓球到达的位置
-    Y = ball_data['velocity'].y * tb.step + ball_data['position'].y
+    Y = balldata.vel_y * tb.step + balldata.pos_y
     height = DIM[3] - DIM[2]
     # 若球没有打在边界上(以下计算过程具体解释详见 table.py Ball类的fly()函数)
     if Y % height != 0:
         # 计算碰撞次数
         count = Y // height
         # 计算真实点y轴坐标
-        ball_data['position'].y = (Y - count * height * (1 - 2 * (count % 2)) + height * (count % 2))
+        balldata.pos_y = (Y - count * height * (1 - 2 * (count % 2)) + height * (count % 2))
     # 若恰好在边界上
     else:
         # 计算碰撞次数
         count = (Y // height if (Y > 0) else (1 - Y // height))
         # 计算真实点y轴坐标
-        ball_data['position'].y = Y % (2 * height)
+        balldata.pos_y = Y % (2 * height)
     # 计算并更新y轴速度
-    ball_data['velocity'].y = ball_data['velocity'].y * ((count + 1) % 2 * 2 - 1)
+    balldata.vel_y = balldata.vel_y * ((count + 1) % 2 * 2 - 1)
     return abs(count),ball_data
 
 
@@ -70,11 +85,11 @@ def side_life_consume(tb,ds):
     :return: 执行完决策后我方体力值
     """
     # 首先取得迎球方和跑位方的信息
-    player_data = tb.side
-    op_player_data = tb.op_side
+    playerdata = player_data(tb)
+    op_playerdata = op_player_data(tb)
     # 减少体力值（考虑跑位方可能使用掉血包道具）
-    if op_player_data["active_card"] == CARD_DECL:
-        player_data["life"] -= CARD_DECL_PARAM
+    if op_playerdata.active_card == CARD_DECL:
+        playerdata.life -= CARD_DECL_PARAM
     # 获取我方此次决策结果
     player_action = play(tb, ds)
     '''
@@ -87,7 +102,7 @@ def side_life_consume(tb,ds):
     # 将迎球方动作中的距离速度等值规整化为整数
     player_action.normalize()
     # 球拍的全速是球X方向速度，按照体力值比例下降
-    velocity = int((player_data["life"] / RACKET_LIFE) * BALL_V[1])
+    velocity = int((playerdata.life / RACKET_LIFE) * BALL_V[1])
     # bat_distance 为 指定迎球的距离
     bat_distance = player_action.bat
     # 如果指定迎球的距离大于最大速度的距离，则丢球，比赛结束
@@ -95,10 +110,10 @@ def side_life_consume(tb,ds):
         return False
 
     # 按照迎球的距离减少体力值（考虑跑位方之前可能使用变压器道具）
-    player_data["life"] -= (abs(bat_distance) ** 2 // FACTOR_DISTANCE ** 2) * (CARD_AMPL_PARAM if op_player_data["active_card"] == CARD_AMPL else 1)
+    playerdata.life -= (abs(bat_distance) ** 2 // FACTOR_DISTANCE ** 2) * (CARD_AMPL_PARAM if op_playerdata.active_card == CARD_AMPL else 1)
 
     # 按照给球加速度的指标减少体力值（考虑跑位方之前可能使用变压器道具）
-    player_data["life"] -= (abs(player_action.acc) ** 2 // FACTOR_SPEED ** 2) * (CARD_AMPL_PARAM if op_player_data["active_card"] == CARD_AMPL else 1)
+    playerdata.life -= (abs(player_action.acc) ** 2 // FACTOR_SPEED ** 2) * (CARD_AMPL_PARAM if op_playerdata.active_card == CARD_AMPL else 1)
 
     # 如果指定跑位的距离大于最大速度的距离，则采用最大速度距离
     run_distance = sign(player_action.run) * min(abs(player_action.run), velocity * tb.step)
@@ -108,7 +123,7 @@ def side_life_consume(tb,ds):
     if player_action == CARD_TLPT:  # 如果碰到瞬移卡，则从距离减去CARD_TLPT_PARAM再计算体力值减少
         param = CARD_TLPT_PARAM
     if abs(run_distance) - param > 0:
-        player_data["life"] -= (abs(run_distance) - param) ** 2 // FACTOR_DISTANCE ** 2
+        playerdata.life -= (abs(run_distance) - param) ** 2 // FACTOR_DISTANCE ** 2
 
 
 
@@ -119,17 +134,17 @@ def get_op_acc(tb):
     :param count: 与桌碰撞次数
     :return: 跑位方（对方）加速度
     """
-    # 首先取得球的信息
-    ball_data = tb.ball
+    # 创建ball_data类实例
+    balldata = ball_data(tb)
     # Y 为 没有墙壁时到达的位置
-    Y = -ball_data['velocity'].y * tb.step + ball_data['position'].y
+    Y = -balldata.vel_y * tb.step + balldata.pos_y
     height = DIM[3] - DIM[2]
     # 若球没有打在边界上，计算碰撞次数
     if Y % height != 0:
         count = Y // height
     else:# 若恰好在边界上
         count = (Y // height if (Y > 0) else (1 - Y // height))
-    return ball_data['velocity'].y * ((count + 1) % 2 * 2 - 1) - 111
+    return balldata.vel_y * ((count + 1) % 2 * 2 - 1) - 111
     # 此次111本应该为我方上一次打球至对方处，球y轴的速度。此数据应当从pingpong.py里29行左右（记录日志项）log中获取。
     # 暂时搁置
 

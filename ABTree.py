@@ -25,7 +25,7 @@ class node:
         注意最后一步需要根据是自己还是对方节点返回正、负值
         :return: 叶子节点估值
         '''
-        # TODO 估值具体实现
+        # 估值具体实现
         pass
     def fillChild(self, getAction = False):
         '''
@@ -33,7 +33,7 @@ class node:
         :param getAction: 只有根节点需要，获得每个子节点达到的操作方式
         :return: None或RacketData
         '''
-        # TODO 添加子节点具体实现
+        # 添加子节点具体实现
         pass
 
 class NegaMaxTree:

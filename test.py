@@ -171,7 +171,6 @@ def yspeed2mirror(y_speed:int, o_axis:int):
 def mirror2real(y_axis:int):
     """
     将镜像点映射为真实点
-    :param o_axis: 原点的真实y坐标（一般代发球点的真实y坐标）
     :param y_axis: 镜像点y坐标
     :return: 真实点y坐标，范围0-1,000,000
     """

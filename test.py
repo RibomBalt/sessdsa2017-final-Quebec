@@ -17,27 +17,29 @@ def ball_fly_to(tb):
     :param height: 乒乓球桌的宽度, DIM[3] - DIM[2]
     :return: 与桌碰撞次数
     """
+    # 首先取得球的信息
+    ball_data = tb.ball
     # x方向的位置更新
     # tb.step 为 1800 tick
-    tb.ball['position'].x += tb.ball['velocity'].x * tb.step
+    ball_data['position'].x += ball_data['velocity'].x * tb.step
     # Y 为 没有墙壁时乒乓球到达的位置
-    Y = tb.ball['velocity'].y * tb.step + tb.ball['position'].y
+    Y = ball_data['velocity'].y * tb.step + ball_data['position'].y
     height = DIM[3] - DIM[2]
     # 若球没有打在边界上(以下计算过程具体解释详见 table.py Ball类的fly()函数)
     if Y % height != 0:
         # 计算碰撞次数
         count = Y // height
         # 计算真实点y轴坐标
-        tb.ball['position'].y = (Y - count * height * (1 - 2 * (count % 2)) + height * (count % 2))
+        ball_data['position'].y = (Y - count * height * (1 - 2 * (count % 2)) + height * (count % 2))
     # 若恰好在边界上
     else:
         # 计算碰撞次数
         count = (Y // height if (Y > 0) else (1 - Y // height))
         # 计算真实点y轴坐标
-        tb.ball['position'].y = Y % (2 * height)
+        ball_data['position'].y = Y % (2 * height)
     # 计算并更新y轴速度
-    tb.ball['velocity'].y = tb.ball['velocity'].y * ((count + 1) % 2 * 2 - 1)
-    return abs(count)
+    ball_data['velocity'].y = ball_data['velocity'].y * ((count + 1) % 2 * 2 - 1)
+    return abs(count),ball_data
 
 
 def ball_v_range(tb):

@@ -7,7 +7,7 @@ STEP = 1800
 # tb为TableData类型的对象
 # ds为函数可以利用的存储字典
 # 函数需要返回一个RacketAction对象
-def play(tb, ds):
+def pretend_play(tb, ds):
     return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, 0, 0, None, None)
 
 class ball_data():
@@ -95,7 +95,7 @@ def side_life_consume(pd:player_data, opd:op_player_data, tb:TableData, ds):
     if opd.active_card == CARD_DECL:
         pd.life -= CARD_DECL_PARAM
     # 获取我方此次决策结果
-    player_action = play(tb, ds)
+    player_action = pretend_play(tb, ds)
     '''
     player_action的属性： 
     .bat t0~t1迎球的动作矢量（移动方向及距离）

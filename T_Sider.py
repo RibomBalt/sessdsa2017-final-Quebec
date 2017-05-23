@@ -27,12 +27,17 @@ def serve(ds:dict) -> tuple:
 # ds为函数可以利用的存储字典
 # 函数需要返回一个RacketAction对象
 def play(tb:TableData, ds:dict) -> RacketAction:
+    # 计算速度范围
     v_range = ball_v_range(tb.ball['velocity'].y)
+    # 计算介于可行范围内的最小的目标v
+
     target = min(v_range, key=lambda x:abs(x - tb.ball['velocity'].y)) - tb.ball['velocity'].y
+    # 如果有道具，则对自己使用
     if tb.cards['cards']:
         side, item = 'SELF', tb.cards['cards'].pop(0)
     else:
         side, item = None, None
+    # 返回
     return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, target, 500000 - tb.ball['position'].y, side, item)
 
 # 对局后保存历史数据函数

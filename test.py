@@ -3,11 +3,20 @@ from table import *
 # STEP 半个来回时长
 STEP = 1800
 
+'''
 # 打球函数
-# tb为TableData类型的对象
-# ds为函数可以利用的存储字典
-# 函数需要返回一个RacketAction对象
-def pretend_play(tb, ds):
+def play(tb:TableData, ds) -> RacketAction:
+    # 创建ball_data类实例
+    bd = ball_data(tb)
+    # 创建player_data类（迎球方）和op_player_data类（跑位方）实例
+    pd = player_data(tb)
+    opd = op_player_data(tb)
+    ##########然后调用下面的函数，传入tb,ds,bd,pd,opd############
+    return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, 0, 0, None, None)
+'''
+
+# 假装打球函数
+def pretend_play(tb:TableData, ds) -> RacketAction:
     return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, 0, 0, None, None)
 
 class ball_data():
@@ -24,13 +33,6 @@ class player_data():
 class op_player_data():
     def __init__(self, tb):
         self.active_card = tb.op_side["active_card"]
-
-
-# 创建ball_data类实例
-bd = ball_data(tb)
-# 创建player_data类（迎球方）和op_player_data类（跑位方）实例
-pd = player_data(tb)
-opd = op_player_data(tb)
 
 def ball_fly_to(bd:ball_data):
     """
@@ -130,7 +132,7 @@ def side_life_consume(pd:player_data, opd:op_player_data, tb:TableData, ds):
         pd.life -= (abs(run_distance) - param) ** 2 // FACTOR_DISTANCE ** 2
     return pd.life
 
-
+'''
 def get_op_acc(bd:ball_data):
     """
     根据对方打过来的球的速度位置，反推出跑位方（对方）加速度
@@ -149,7 +151,7 @@ def get_op_acc(bd:ball_data):
     return bd.vel_y * ((count + 1) % 2 * 2 - 1) - 111
     # 此次111本应该为我方上一次打球至对方处，球y轴的速度。此数据应当从pingpong.py里29行左右（记录日志项）log中获取。
     # 暂时搁置
-
+'''
 
 ####################################################################
 
@@ -169,7 +171,6 @@ def yspeed2mirror(y_speed:int, o_axis:int):
 def mirror2real(y_axis:int):
     """
     将镜像点映射为真实点
-    :param o_axis: 原点的真实y坐标（一般代发球点的真实y坐标）
     :param y_axis: 镜像点y坐标
     :return: 真实点y坐标，范围0-1,000,000
     """

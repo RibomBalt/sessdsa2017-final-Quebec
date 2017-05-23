@@ -27,14 +27,24 @@ def serve(ds:dict) -> tuple:
 # ds为函数可以利用的存储字典
 # 函数需要返回一个RacketAction对象
 def play(tb:TableData, ds:dict) -> RacketAction:
-    # 计算速度范围
-    v_range = ball_v_range(tb.ball['velocity'].y)
-    # 计算介于可行范围内的最小的目标v
-
-    min_index = v_range.index(min(v_range, key=lambda x: abs(x - tb.ball['velocity'].y)))
-    # 是大值则-1，小值则+1
-    target = v_range[min_index] + 1 - tb.ball['velocity'].y
-
+    if tb.tick < 1800:
+        # 计算速度范围
+        v_range = ball_v_range(tb.ball['velocity'].y)
+        # 计算介于可行范围内的最小的目标v
+        min_index = v_range.index(min(v_range, key=lambda x: abs(x - tb.ball['velocity'].y)))
+        # 是大值则-1，小值则+1
+        target = v_range[min_index] + 1 - 2 * (min_index % 2) - tb.ball['velocity'].y
+        ds['time'] = min_index % 2 # 1表示小值
+        print(ds)
+    else:
+        # 已经做过决策，则换边
+        ds['time'] += 1
+        y=tb.ball['velocity'].y
+        height = DIM[3] - DIM[2]
+        v_range = [(n * height - y) // 1800 for n in range(-2, 4) if (ds['time'] - n) % 2 == 0]
+        min_index = v_range.index(min(v_range, key=lambda x: abs(x - tb.ball['velocity'].y)))
+        target = v_range[min_index] - tb.ball['velocity'].y + 1 if (ds['time'] % 2 == 0)^(min_index < 1) else 0
+        print(min_index, v_range,ds)
     # 如果有道具，则对自己使用
     if tb.cards['cards']:
         side, item = 'SELF', tb.cards['cards'].pop(0)

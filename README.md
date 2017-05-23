@@ -18,6 +18,7 @@
 [oschina码云项目地址](http://git.oschina.net/chbpku/pingpong.sessdsa)
 
 ## 文件说明：
+- sessdsa2017-pingpong.pdf：期末作业介绍PPT PDF
 - pingpong.py：乒乓对战主程序，自动查找当前目录下“T_*.py”的文件作为算法，两两对战，并输出结果（文本）和复盘数据（以shelve模块方式保存）。
 - table.py：主要类Table、LogEntry等定义
 - show.py：基于pygame的复盘数据可视化
@@ -27,6 +28,9 @@
 - FAQ.md：常见问题
 
 ## 修改历史
+
+### 20170523
+- 李逸飞修正了fly和get_card的bug
 
 ### 20170522
 - 陈斌增加了算法第三个函数summarize，可以用来保存终局的分析数据；

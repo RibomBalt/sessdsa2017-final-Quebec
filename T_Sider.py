@@ -10,10 +10,10 @@ def ball_v_range(y):
     """
     height = DIM[3] - DIM[2]
     # v0,v1,v2,v3是速度的范围边界:v0-v1,v2-v3可取
-    v0 = (3 * height - y) // 1800
-    v1 = (1 * height - y) // 1800
-    v2 = (0 - y) // 1800
-    v3 = (-2 * height - y) // 1800
+    v0 = (3 * height - y - 100) // 1800
+    v1 = (1 * height - y + 100) // 1800
+    v2 = (- y - 100) // 1800
+    v3 = (-2 * height - y + 100) // 1800
     return v0, v1, v2, v3
 
 # 发球函数，总是做为West才发球

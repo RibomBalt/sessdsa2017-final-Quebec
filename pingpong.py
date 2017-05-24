@@ -15,7 +15,7 @@ def race(west_name, west_serve, west_play, west_summarize,
         d = shelve.open('DS-%s' % (main_table.players[side].name,))
         try:
             ds = d['datastore']
-        except KeyError:  # 如果这个文件没有内容，说明球队尚未建立历史数据gbbgbg
+        except KeyError:  # 如果这个文件没有内容，说明球队尚未建立历史数据
             ds = dict()
         finally:
             d.close()

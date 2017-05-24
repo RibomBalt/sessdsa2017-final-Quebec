@@ -71,15 +71,18 @@ def ball_v_range(bd:ball_data):
     根据我方出射点坐标，算出y轴可取速度的边界值
     :param tb.step: 1800 tick
     :param Y: 镜像点y坐标
-    :param height: 乒乓球桌的宽度, DIM[3] - DIM[2]
+    :param height: 乒乓球桌的宽度, D                                                                                                                     IM[3] - DIM[2]
     :return: 与桌碰撞次数
     """
     height = DIM[3] - DIM[2]
-    # v0,v1,v2,v3是速度的范围边界:v0-v1,v2-v3可取
+    # v0,v1,v2,v3是速度的范围边界:可取[v3,v2]∪[v1,v0]
     v0 = (3 * height - bd.pos_y) // STEP
-    v1 = (1 * height - bd.pos_y) // STEP
+    v1 = (1 * height - bd.pos_y) // STEP + 1
     v2 = (0 - bd.pos_y) // STEP
-    v3 = (-2 * height - bd.pos_y) // STEP
+    v3 = (-2 * height - bd.pos_y) // STEP + 1
+    # 贴边打的情况算作反弹零次，需要排除
+    if bd.pos_y == 0:
+        v2 = -1
     return v0, v1, v2, v3
 
 
@@ -87,7 +90,7 @@ def side_life_consume(pd:player_data, opd:op_player_data, tb:TableData, ds):
     """
     根据我方此次决策，算出迎球+加速+跑位的总体力消耗(考虑道具)
     :param player_data: 决策前迎球方的信息
-    :param op_player_data: 决策前跑位方的信息
+    :param o      p_player_data: 决策前跑位方的信息
     :param player_action: 我方此次决策结果 RocketAction类
     :param bat_distance: 此次决策指定迎球的距离
     :param run_distance: 此次决策指定跑位的距离
@@ -175,6 +178,6 @@ def mirror2real(y_axis:int):
     :return: 真实点y坐标，范围0-1,000,000
     """
     n_mirror, remain = divmod(y_axis, DIM[3] - DIM[2])
-    # n_mirror是穿过墙的数目
+    # n_mirror是穿过墙的数目，可正可负
     return {0:remain, 1:DIM[3] - remain}[n_mirror % 2]
 

@@ -10,7 +10,7 @@ def serve(ds:dict) -> tuple:
 # tb为TableData类型的对象
 # ds为函数可以利用的存储字典
 # 函数需要返回一个RacketAction对象
-def play(tb:TableData, ds:dict) -> RacketAction:
+def play(tb, ds):
     return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, 0, 0, None, None)
 
 # 对局后保存历史数据函数

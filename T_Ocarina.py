@@ -3,7 +3,7 @@ from table import *
 # STEP 半个来回时长
 STEP = 1800
 
-'''
+
 # 打球函数
 def play(tb:TableData, ds) -> RacketAction:
     # 创建ball_data类实例
@@ -13,11 +13,12 @@ def play(tb:TableData, ds) -> RacketAction:
     opd = op_player_data(tb)
     ##########然后调用下面的函数，传入tb,ds,bd,pd,opd############
     return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, 0, 0, None, None)
-'''
 
+'''
 # 假装打球函数
 def play(tb:TableData, ds) -> RacketAction:
     return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, 0, 0, None, None)
+'''
 
 class ball_data():
     def __init__(self, tb):
@@ -179,11 +180,13 @@ def mirror2real(y_axis:int):
     # n_mirror是穿过墙的数目
     return {0:remain, 1:DIM[3] - remain}[n_mirror % 2]
 
-def serve(ds):
-
+def serve(ds:dict) -> tuple:
     return BALL_POS[1], BALL_V[1]
 
 # 打球函数
 # tb为TableData类型的对象
 # ds为函数可以利用的存储字典
 # 函数需要返回一个RacketAction对象
+def summarize(tick:int, winner:str, reason:str, west:RacketData, east:RacketData, ball:BallData, ds:dict):
+    return
+

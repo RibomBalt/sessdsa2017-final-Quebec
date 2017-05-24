@@ -46,7 +46,7 @@ def ball_fly_to(bd:ball_data):
     # x方向的位置更新
     # tb.step 为 1800 tick
     bd.pos_x += bd.vel_x * STEP
-    # Y 为没有墙壁时乒乓球到达的位置
+    # Y 为 没有墙壁时乒乓球到达的位置
     Y = bd.vel_y * STEP + bd.pos_y
     height = DIM[3] - DIM[2]
     # 若球没有打在边界上(以下计算过程具体解释详见 table.py Ball类的fly()函数)
@@ -171,7 +171,6 @@ def yspeed2mirror(y_speed:int, o_axis:int):
 def mirror2real(y_axis:int):
     """
     将镜像点映射为真实点
-    :param o_axis: 原点的真实y坐标（一般代发球点的真实y坐标）
     :param y_axis: 镜像点y坐标
     :return: 真实点y坐标，范围0-1,000,000
     """

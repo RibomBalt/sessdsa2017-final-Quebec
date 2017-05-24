@@ -1,16 +1,7 @@
-# Created by .ignore support plugin (hsz.mobi)
+﻿文本指南/
 .idea/
-DS-T_Sider.bak
-DS-T_Sider.dat
-DS-T_Sider.dir
-DS-T_idiot.bak
-DS-T_idiot.dat
-DS-T_idiot.dir
-[E.M]T_idiot-VS-T_idiot.bak
-[E.M]T_idiot-VS-T_idiot.dat
-[E.M]T_idiot-VS-T_idiot.dir
-[W.B]T_Sider-VS-T_Sider.bak
-[W.B]T_Sider-VS-T_Sider.dat
-[W.B]T_Sider-VS-T_Sider.dir
-__pycache__/
+*.bak
+*.dat
+*.dir
 
+__pycache__/

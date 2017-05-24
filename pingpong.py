@@ -1,4 +1,4 @@
-from table import Table, LogEntry, RacketData, BallData, DIM, TMAX, PL, RS
+from table import Table, LogEntry, RacketData, BallData, CardData, DIM, TMAX, PL, RS
 import shelve
 
 
@@ -30,7 +30,8 @@ def race(west_name, west_serve, west_play, west_summarize,
         log.append(LogEntry(main_table.tick,
                             RacketData(main_table.players[main_table.side]),
                             RacketData(main_table.players[main_table.op_side]),
-                            BallData(main_table.ball)))
+                            BallData(main_table.ball),
+                            CardData(main_table.card_tick, main_table.cards)))
         # 运行一趟
         main_table.time_run()
 
@@ -38,7 +39,8 @@ def race(west_name, west_serve, west_play, west_summarize,
     log.append(LogEntry(main_table.tick,
                         RacketData(main_table.players[main_table.side]),
                         RacketData(main_table.players[main_table.op_side]),
-                        BallData(main_table.ball)))
+                        BallData(main_table.ball),
+                        CardData(main_table.card_tick, main_table.cards)))
 
     # 终局，让双方进行本局总结
     main_table.postcare()
@@ -76,8 +78,8 @@ def race(west_name, west_serve, west_play, west_summarize,
 import os
 
 # 取得所有以T_开始文件名的算法文件名
-#players = [f[:-3] for f in os.listdir('.') if os.path.isfile(f) and f[-3:] == '.py' and f[:2] == 'T_']
-players = ['T_Sider','T_Sider']
+# players = [f[:-3] for f in os.listdir('.') if os.path.isfile(f) and f[-3:] == '.py' and f[:2] == 'T_']
+players = ['T_random', 'T_Sider']
 for west_name in players:
     for east_name in players:
         exec('import %s as WP' % (west_name,))

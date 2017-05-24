@@ -74,3 +74,6 @@ def play(tb: TableData, ds: dict) -> RacketAction:
             d[l[0]] = int(l[1])
     return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y,
                         d['y_speed'], d['y_go'], None, None)
+
+def summarize(tick:int, winner:str, reason:str, west:RacketData, east:RacketData, ball:BallData, ds:dict):
+    return

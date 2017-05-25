@@ -17,7 +17,7 @@ import sys
 
 # 这个参数用来调整时间流逝的速率
 # game_speed=1时, 一来回需要3.6秒
-game_speed = 10
+game_speed = 1
 # 各种参数
 x, y = 18, 10
 s_size = (1024, 600)
@@ -33,12 +33,14 @@ table = (
     (center[0] - x / 2 * n, center[1] + y / 2 * n),)
 
 
-# 读取文件, 返回文件中的log类
+# 读取文件, 返回文件中的log类, 胜利者, 和胜利原因
 def readlog(logname):
     d = shelve.open(logname)
     log = d['log']
+    winner = d['winner']
+    reason = d['reason']
     d.close()
-    return log
+    return log, winner, reason
 
 
 # 把log类转换成字典
@@ -50,6 +52,7 @@ def getdata(alog):
     d['player'] = {}
     d['player'][alog.side.side] = alog.side
     d['player'][alog.op_side.side] = alog.op_side
+    d['cards'] = alog.card.cards
     return d
 
 
@@ -126,6 +129,28 @@ def writeinfo(screen, player, font):
     screen.blit(font.render(str(int(player['East'].life)), True, (0, 0, 0)), (table[1][0] - 80, table[1][1] - 100))
 
 
+# 画道具
+def draw_card(screen, cards, font):
+    for card in cards:
+        x, y = pos_trans(card.pos)
+        image = pygame.image.load('%s.png' % card.code.lower()).convert_alpha()
+        x -= image.get_width() / 2
+        y -= image.get_height() / 2
+        screen.blit(image, (x, y))
+        
+#画道具箱
+def draw_card_box(screen, player):
+    i = 0
+    for card in player['West'].card_box:
+        image = pygame.image.load('%s.png'%card.code.lower()).convert_alpha()
+        screen.blit(image, (150-image.get_width()/2, 170+i))
+        i+=image.get_height()+10
+    i = 0
+    for card in player['East'].card_box:
+        image = pygame.image.load('%s.png'%card.code.lower()).convert_alpha()
+        screen.blit(image, (s_size[0]-150-image.get_width()/2, 170+i))
+        i+=image.get_height()+10
+
 def main():
     # 判断有无命令行参数
     if len(sys.argv) == 2:
@@ -135,27 +160,29 @@ def main():
         import os, re
         file_list = os.listdir(os.getcwd())
         # 编译正则表达式，寻找对应的文件名
-        r = re.compile(r'^\[[EW]\.[A-Z]\]T_[^-]+-VS-T_[^.]+\.dat$')
+        r = re.compile(r'^\[[EW]\.[A-Z]\]T_[^-]+-VS-T_[^.]+\.(dat|db)$')
         # 首先保证是文件而不是目录，且不为空
-        namelist=[]#用来保存所有对战名称
+        namelist = []  # 用来保存所有对战名称
         print('请注意，本代码不支持未找到的报错，希望有人能改正\n')
         for name in filter(lambda f: os.path.isfile(f) and os.path.getsize(f) != 0, file_list):
             m = r.match(name)
             if m is not None:
                 # 不为空，则拿到了一个正确的文件
-                logname = name[:-4]  # 去除.dat后缀
+                logname = name[:name.rindex('.')]  # 去除.dat/.db后缀
                 namelist.append(logname)
-        #else:
-            # 没找到，说明本目录下没有这个测试文件
-         #   raise NameError("No Test File in this directory.")
+                # else:
+                # 没找到，说明本目录下没有这个测试文件
+                #   raise NameError("No Test File in this directory.")
 
-    # 读出log
     for i in range(len(namelist)):
-        print('第',i,'个',namelist[i])
-    ssssss=int(input('请输入你想看的对战的序号，从0开始，到%d结束\n' %(len(namelist)-1)))#序号
-    logname=namelist[ssssss]
-    log = readlog(logname)
+        print('第', i, '个', namelist[i])
+    ssssss = int(input('请输入你想看的对战的序号，从0开始，到%d结束\n' % (len(namelist) - 1)))  # 序号
+    logname = namelist[ssssss]
 
+    # 读出log, winner, reason
+    log, winner, reason = readlog(logname)
+    over = False
+    
     # pygame初始化
     pygame.init()
     screen = pygame.display.set_mode(s_size)
@@ -165,14 +192,20 @@ def main():
     # 读取两轮数据
     d_current = getdata(log.pop(0))
     player = d_current['player']
-    d_next = getdata(log.pop(0))
     ball_pos = d_current['ball_pos']
     ball_v = d_current['ball_v']
     tick = d_current['tick']
-    next_tick = d_next['tick']
+    
+    next_tick = 0
+    
+    if len(log)>1:
+        d_next = getdata(log.pop(0))
+        next_tick = d_next['tick']
+    else:
+        over = True
 
     clock.tick()
-    over = False
+    
     while True:
         for event in pygame.event.get():
             if event.type == QUIT:
@@ -181,17 +214,23 @@ def main():
         # 画画
         screen.fill((255, 255, 255))
         writeinfo(screen, player, font)
+        draw_card(screen, d_current['cards'], font)
+        draw_card_box(screen, player)
         draw_all(screen, ball_pos, player['West'], player['East'])
 
         t_passed = clock.tick() * game_speed
 
         # 最后一次记录之后再走半回合
-        if over and tick > next_tick + 1800:
-            screen.blit(font.render('Game over reason for%s' %(name[:5]), True, (0, 0, 0)), (center[0] - 50, center[1]))
+        if over and tick >= next_tick + 1800:
+            tick = next_tick + 1800
+            screen.blit(font.render(reason, True, (0, 0, 0)), (center[0] - 50, center[1] - 220))
+            screen.blit(font.render("%s win!" % player[winner].name, True, (0, 0, 0)),
+                        (center[0] - 60, center[1] - 270))
             t_passed = 0
 
         # 时间流逝和球的移动
         tick += t_passed
+        screen.blit(font.render("tick: %s" % tick, True, (0, 0, 0)), (20, 20))
         ball_pos.x += ball_v.x * t_passed
         ball_pos.y += ball_v.y * t_passed
 

@@ -107,6 +107,8 @@ class Vector:  # 矢量
 
     __repr__ = __str__
 
+    __repr__ = __str__
+
 
 class Position(Vector):  # 位置
     pass

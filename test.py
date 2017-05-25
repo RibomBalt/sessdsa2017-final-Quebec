@@ -77,9 +77,9 @@ def ball_v_range(bd:ball_data):
     height = DIM[3] - DIM[2]
     # v0,v1,v2,v3是速度的范围边界:v0-v1,v2-v3可取
     v0 = (3 * height - bd.pos_y) // STEP
-    v1 = (1 * height - bd.pos_y) // STEP
+    v1 = (1 * height - bd.pos_y) // STEP + 1
     v2 = (0 - bd.pos_y) // STEP
-    v3 = (-2 * height - bd.pos_y) // STEP
+    v3 = (-2 * height - bd.pos_y) // STEP + 1
     return v0, v1, v2, v3
 
 

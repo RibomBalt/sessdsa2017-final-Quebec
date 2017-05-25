@@ -1,8 +1,7 @@
-﻿﻿文本指南/
+﻿文本指南/
 .idea/
 *.bak
 *.dat
 *.dir
 
 __pycache__/
-

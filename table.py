@@ -104,6 +104,8 @@ class Vector:  # 矢量
     def __str__(self):
         return "<%s,%s>" % (self.x, self.y)
 
+    __repr__ = __str__
+
 
 class Position(Vector):  # 位置
     pass

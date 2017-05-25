@@ -1,9 +1,4 @@
-#Final-Homework-SESSDSA
-数据结构与算法大作业！<br><br>
-2017/5/15正式开工
-
-
-## pingpong.sessdsa 漂移乒乓
+# pingpong.sessdsa 漂移乒乓
 地空数算课期末作业
 
 【北京大学地空学院数据结构与算法课程实习作业2017】
@@ -26,6 +21,7 @@
 - T_idiot.py：示例对战算法，只被动接球
 - README.md：本文件
 - FAQ.md：常见问题
+- team.py：确定各组分区的算法程序
 
 ## 修改历史
 

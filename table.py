@@ -103,9 +103,6 @@ class Vector:  # 矢量
 
     def __str__(self):
         return "<%s,%s>" % (self.x, self.y)
-    __repr__ = __str__
-
-    __repr__ = __str__
 
     __repr__ = __str__
 
@@ -266,7 +263,7 @@ class Racket:  # 球拍
 
     def get_velocity(self):
         # 球拍的全速是球X方向速度，按照体力值比例下降，当体力值下降到55%，将出现死角
-        return int((self.life / RACKET_LIFE) * BALL_V[1])
+        return int((self.life / RACKET_LIFE) * BALL_V[0])
 
     def update_pos_bat(self, tick_step, active_card):
         # 如果指定迎球的距离大于最大速度的距离，则采用最大速度距离
@@ -442,7 +439,7 @@ class Table:  # 球桌
         player.update_pos_bat(self.tick_step, self.active_card)
         if not (player.pos == self.ball.pos):
             # 没接上球
-            print(player.pos, self.ball.pos)
+            print("player_pos:"+str(player.pos), "ball_pos:"+str(self.ball.pos))
             self.finished = True
             self.winner = self.op_side
             self.reason = "miss_ball"

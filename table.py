@@ -428,8 +428,8 @@ class Table:  # 球桌
             'cards': copy.copy(self.cards)}
         # 调用，返回迎球方的动作
         player_action = player.play(TableData(self.tick, self.tick_step,
-                                              dict_side, dict_op_side, dict_ball, dict_card),
-                                    player.datastore)
+                                              dict_side, dict_op_side,
+                                              dict_ball, dict_card),player.datastore)
         # 设置迎球方的动作，迎球方使用的道具生效要到下一趟
         # 将迎球方动作中的距离速度等值规整化为整数
         player_action.normalize()

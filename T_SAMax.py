@@ -3,10 +3,20 @@ from test import *
 import numpy as np
 
 Height = 1000000
-C = 0.5
+C = 0.8
 # 固定的V指向区间，默认以V=0时为取余数点。分为两个数组
-V_range = np.array([*np.arange(-1999800, -1800, 1800),*np.arange(1000800, 2998800, 1800)])
+V_range1 = np.arange(-1999800, -1800, 1800)
+V_range2 = np.arange(1000800, 2998800, 1800)
 Random = [np.random.random() for i in range(1000000)]
+# 球的
+Card_Value = {
+    'SP':500,
+    'DS':0,
+    'IL':2000,
+    'DL':2000,
+    'TP':1000,
+    'AM':1500,
+}
 
 #返回真实点的高度
 def y2real(y):
@@ -30,11 +40,12 @@ def op_player_f(v,v0,y0):
     :return: 
     """
     lose = int(((v - v0)/FACTOR_SPEED)**2)
-    op_lose = int(((y2real(y0 - 1800*v0) - C*y2real(y0 + 1800*v))/FACTOR_DISTANCE)**2)
-    return  - (lose - op_lose)
+    op_lose = int(((y2real(y0 - 1800*v0) - y2real(y0 + 1800*v))/FACTOR_DISTANCE)**2)*C
+    # v_fix =
+    return   -(lose - op_lose)
 
 
-def getMax(v0, y0, target_range = None, T_start = 1500, gamma = 0.99, T_end = 20, evaluate = op_player_f):
+def getMax(v0, y0, target_range = None, T_start = 2000, gamma = 0.99, T_end = 2, evaluate = op_player_f):
     """
     求给定一元函数求v_range最大值。使用模拟退火算法
     :param target_range: 指向对面坐标可以取值的范围
@@ -49,10 +60,13 @@ def getMax(v0, y0, target_range = None, T_start = 1500, gamma = 0.99, T_end = 20
     # 首先做v1
     if target_range == None:
         # 获取符合这个y0的v范围
-        target_range = V_range + y0 % 1800
-        if y0 % 1800 >= 1200:
-            target_range = target_range[:-1]
-    current_v = int(len(V_range) * np.random.random())
+        if v0 <= 0:
+            target_range = V_range1 + y0 % 1800
+        else:
+            target_range = V_range2 + y0 % 1800
+            if y0 % 1800 >= 1200:
+                target_range = target_range[:-1]
+    current_v = int(len(target_range) * np.random.random())
     current_value = evaluate((target_range[current_v]-y0)//1800, v0, y0)
     # value_matrix = evaluate(target_range, v0, y0)
     # 添加BSF，制胜法宝
@@ -75,12 +89,12 @@ def getMax(v0, y0, target_range = None, T_start = 1500, gamma = 0.99, T_end = 20
         T_start *= gamma
         # print(current_v, current_value, sep = ',')
     v_best = (target_range[BSF[0]] - y0) // 1800
-    # print(v_best)
+    # print(v_best - v0, '*********************')
     return v_best, BSF[1]
 
 
 def serve(ds):
-    return BALL_POS[1], BALL_V[1]
+    return BALL_POS[1], (1800000 - BALL_POS[1]) // 1800 + 1
 
 
 def play(tb: TableData, ds: dict) -> RacketAction:

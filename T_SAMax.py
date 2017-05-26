@@ -1,6 +1,8 @@
 from table import *
 from test import *
+import time
 import numpy as np
+import pandas as pd
 
 Height = 1000000
 C = 0.8
@@ -92,6 +94,34 @@ def getMax(v0, y0, target_range = None, T_start = 2000, gamma = 0.99, T_end = 2,
     # print(v_best - v0, '*********************')
     return v_best, BSF[1]
 
+def pandas_max(v0, y0, target_range = None):
+    """
+    
+    :param v0: 
+    :param y0: 
+    :param target_range: 
+    :return: 
+    """
+    if target_range == None:
+        # 获取符合这个y0的v范围
+        if v0 <= 0:
+            target_range = V_range1 + y0 % 1800
+        else:
+            target_range = V_range2 + y0 % 1800
+            if y0 % 1800 >= 1200:
+                target_range = target_range[:-1]
+    series = pd.Series(target_range, index = target_range)
+    f = lambda v: op_player_f(v, v0, y0)
+    values = series.apply(f)
+    max_index = values.argmax()
+    return max_index, values[max_index]
+
+# t1 = time.time()
+# print(pandas_max(40,10000))
+# t2 = time.time()
+# print(t1,t2,t2-t1)
+
+
 
 def serve(ds):
     return BALL_POS[1], (1800000 - BALL_POS[1]) // 1800 + 1
@@ -106,7 +136,7 @@ def play(tb: TableData, ds: dict) -> RacketAction:
     """
     # return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, 0, 0)
     v0, y0 = tb.ball['velocity'].y, tb.ball['position'].y
-    v_best = getMax(v0, y0)[0]
+    v_best = pandas_max(v0, y0)[0]
     # 如果有道具，则对自己使用
     if tb.cards['cards']:
         side, item = 'SELF', tb.cards['cards'].pop(0)

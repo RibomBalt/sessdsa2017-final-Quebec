@@ -98,8 +98,8 @@ class Vector:  # 矢量
     def __add__(self, other):
         return self.__class__(self.x + other.x, self.y + other.y)
 
-    def __eq__(self, other):  # 判定相等，考虑误差+／-1000
-        return abs(self.x - other.x) <= 1000 and abs(self.y - other.y) <= 1000
+    def __eq__(self, other):  # 判定相等，考虑误差+／-2000
+        return abs(self.x - other.x) <= 2000 and abs(self.y - other.y) <= 2000
 
     def __str__(self):
         return "<%s,%s>" % (self.x, self.y)
@@ -132,7 +132,7 @@ class Ball:  # 球
 
     # 以下是李逸飞同学的超强算法
     # 用于检测是否得到道具。有错误的话，锅由李逸飞来背。邮箱：1500012435@pku.edu.cn
-    def get_card(self, card, eps=1000):
+    def get_card(self, card, eps=2000):
         # 多写点注释。self.pos:(x0,y0),card.pos:(x1,y1),self.velocity:(u,v),self.extent[3]=L
         # 直线方程为 l:-v*x+u*y+v*x0-u*y0=0
         # card经过多次对称后，位置为(x1,±y1+2*k*l)
@@ -147,6 +147,12 @@ class Ball:  # 球
     def fly(self, ticks, list_cards):  # 球运动，更新位置，并返回触壁次数和路径经过的道具（元组）
         # 判断card.pos，如果球经过的话，就返回count的同时返回所有经过的道具列表，并从list_cards中移除。
         hit_cards = [card for card in list_cards if self.get_card(card)]
+        # 对获得的道具按照获取时间先后进行排序
+        if self.velocity.x > 0:
+            hit_cards.sort(key=lambda card: card.pos.x)
+        else:
+            hit_cards.sort(key=lambda card: -card.pos.x)
+        # 从球桌上删除被获取的道具
         for card in hit_cards:
             list_cards.remove(card)
 
@@ -163,7 +169,7 @@ class Ball:  # 球
             count = Y // self.extent[3]  # 穿过了多少次墙（可以是负的，最后取绝对值）
 
             # 两种情形：a） 穿过偶数次墙，这时没有对称变换，速度保持不变。到达的位置就是Y0=Y-self.extent[3]*count
-            #           b） 穿过奇数次墙，是一次对称和一次平移的复合，速度反向。先做平移，到达Y0=Y-self.extent[3]*count，再反射，到self.extent[3]-Y0
+            #         b） 穿过奇数次墙，是一次对称和一次平移的复合，速度反向。先做平移，到达Y0=Y-self.extent[3]*count，再反射，到self.extent[3]-Y0
             # 综合两种情形，奇数时Y0是负的，多一个self.extent[3];偶数时Y0是正的，没有self.extent[3]。综上，ynew=Y0*(-1)^count+(1-(-1)^count)/2*self.extent[3]
             # 因不清楚负数能不能做任意整指数幂，所以用取余来表示奇偶性。
 

@@ -3,7 +3,7 @@ from test import *
 import numpy as np
 
 Height = 1000000
-C = 0.67
+C = 1
 # 固定的V指向区间，默认以V=0时为取余数点。分为两个数组
 V_range = np.array([*np.arange(-1999800, -1800, 1800),*np.arange(1000800, 2998200, 1800)])
 Random = [np.random.random() for i in range(1000000)]

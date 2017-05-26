@@ -1,8 +1,13 @@
 from table import *
+import random
+
+def generate():
+    pass
 
 # 发球函数，总是做为West才发球
 # ds为函数可以利用的存储字典
 # 函数需要返回球的y坐标，和y方向的速度
+
 def serve(ds:dict) -> tuple:
     return BALL_POS[1], BALL_V[1]
 

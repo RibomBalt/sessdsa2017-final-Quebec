@@ -12,16 +12,16 @@ BALL_POS = (DIM[0], (DIM[3] - DIM[2]) // 2)
 BALL_V = (1000, 1000)
 # 球拍的生命值，100个回合以上
 RACKET_LIFE = 100000
-# 迎球和跑位扣减距离除以系数的平方（LIFE=0-10000)
-FACTOR_DISTANCE = 10000
-# 加速则扣减速度除以系数结果的平方（LIFE=0-400)
-FACTOR_SPEED = 50
+# 迎球和跑位扣减距离除以系数的平方（LIFE=0-2500)
+FACTOR_DISTANCE = 20000
+# 加速则扣减速度除以系数结果的平方（LIFE=0-2500)
+FACTOR_SPEED = 20
 # 游戏方代码
 PL = {'West': 'W', 'East': 'E'}
 # 游戏结束原因代码
 RS = {'invalid_bounce': 'B', 'miss_ball': 'M', 'life_out': 'L', 'time_out': 'T'}
 # 道具出现频率每多少ticks出现一个道具
-CARD_FREQ = 40000
+CARD_FREQ = 4000
 # 道具出现的空间范围
 CARD_EXTENT = (-800000, 800000, 100000, 900000)
 # 道具箱的最大容量
@@ -37,7 +37,7 @@ CARD_INCL = 'IL'  # 补血包：给被用道具方补血（增加体力值）；
 CARD_INCL_PARAM = 2000
 CARD_DECL = 'DL'  # 掉血包：给被用道具方减血（减少体力值）；param=2000，life减去param
 CARD_DECL_PARAM = 2000
-CARD_TLPT = 'TP'  # 瞬移术：被用道具方可以移动一段距离而不消耗体力值；param=250000，只作用在迎球阶段
+CARD_TLPT = 'TP'  # 瞬移术：被用道具方可以移动一段距离而不消耗体力值；param=250000，只作用在跑位阶段
 CARD_TLPT_PARAM = 250000
 CARD_AMPL = 'AM'  # 变压器：放大被用道具方的体力值损失；param=2；体力值损失增加1倍。
 CARD_AMPL_PARAM = 2
@@ -81,11 +81,11 @@ class CardBox(list):  # 道具箱，list类型的子类
         return len(self) >= MAX_CARDS
 
     def __str__(self):  # 输出道具名
-        str = '['
+        ret_str = '['
         for card in self:
-            str += card.code + ' '
-        str += ']'
-        return str
+            ret_str += card.code + ' '
+        ret_str += ']'
+        return ret_str
 
 
 class Vector:  # 矢量
@@ -103,6 +103,11 @@ class Vector:  # 矢量
 
     def __str__(self):
         return "<%s,%s>" % (self.x, self.y)
+    __repr__ = __str__
+
+    __repr__ = __str__
+
+    __repr__ = __str__
 
 
 class Position(Vector):  # 位置
@@ -136,8 +141,8 @@ class Ball:  # 球
         # card经过多次对称后，位置为(x1,±y1+2*k*l)
         # 点到直线距离公式dist=|-v*x1+u*(±y1+2*k*l)+v*x0-u*y0|/|self.velocity|
         # 记-v*x1+u*(±y1)+v*x0-u*y0=A1,A2,u*2*l为delta。则求最短距离，即是求A1%delta,A2%delta,-A1%delta,-A2%delta中最小值，再除以self.velocity的模长。
-        A1 = (self.velocity.y * (-card.pos.x + self.pos.x) + self.velocity.y * (card.pos.y - self.pos.y))
-        A2 = (self.velocity.y * (-card.pos.x + self.pos.x) + self.velocity.y * (-card.pos.y - self.pos.y))
+        A1 = (self.velocity.y * (-card.pos.x + self.pos.x) + self.velocity.x * (card.pos.y - self.pos.y))
+        A2 = (self.velocity.y * (-card.pos.x + self.pos.x) + self.velocity.x * (-card.pos.y - self.pos.y))
         delta = (2 * abs(self.velocity.x) * self.extent[3])
         return min(A1 % delta, -A1 % delta, A2 % delta, -A2 % delta) / math.sqrt(
             self.velocity.x ** 2 + self.velocity.y ** 2) < eps
@@ -150,6 +155,9 @@ class Ball:  # 球
 
         # x方向的位置
         self.pos.x += self.velocity.x * ticks
+
+        if self.velocity.y == 0:
+            return 0, hit_cards
 
         # 以下是李逸飞同学的简短新算法
         # ===========NEW!=============
@@ -237,13 +245,15 @@ class Racket:  # 球拍
     def __init__(self, side, pos):  # 选边'West'／'East'和位置
         self.side, self.pos = side, pos
         self.life = RACKET_LIFE
-        self.name = self.serve = self.play = self.action = self.datastore = None
+        self.name = self.serve = self.play = self.summarize = None
+        self.action = self.datastore = None
         self.card_box = CardBox()  # 道具箱，本方拥有的道具，不超过MAX_CARDS个，超过的话按照队列形式删除旧的道具。
 
-    def bind_play(self, name, serve, play):  # 绑定玩家名称和serve, play函数
+    def bind_play(self, name, serve, play, summarize):  # 绑定玩家名称和serve, play, summarize函数
         self.name = name
         self.serve = serve  # 发球函数
         self.play = play  # 接球函数
+        self.summarize = summarize  # 总结函数
 
     def set_action(self, action):  # 设置球拍动作，包括使用道具
         self.action = action
@@ -256,7 +266,7 @@ class Racket:  # 球拍
 
     def get_velocity(self):
         # 球拍的全速是球X方向速度，按照体力值比例下降，当体力值下降到55%，将出现死角
-        return int((self.life / RACKET_LIFE) * BALL_V[1])
+        return int((self.life / RACKET_LIFE) * BALL_V[0])
 
     def update_pos_bat(self, tick_step, active_card):
         # 如果指定迎球的距离大于最大速度的距离，则采用最大速度距离
@@ -307,6 +317,12 @@ class BallData:  # 球的信息，记录日志用
                                       copy.copy(ball_or_pos.velocity)
         else:
             self.pos, self.velocity = ball_or_pos, velocity
+
+
+class CardData:  # 道具信息，记录日志用
+    def __init__(self, card_tick, cards):
+        self.card_tick = card_tick
+        self.cards = copy.copy(cards)  # 道具对象的列表，数量上限为MAX_TABLE_CARDS
 
 
 class Table:  # 球桌
@@ -392,21 +408,27 @@ class Table:  # 球桌
         #    参数：t0时刻双方位置和体力值，以及跑位方的跑位方向；
         #    参数：球在t1时刻的位置和速度
 
-        dict_side = {'position': copy.copy(player.pos),
-                     'life': player.life,
-                     'cards': copy.copy(player.card_box)}
-        dict_op_side = {'position': None if self.active_card[1] == CARD_DSPR else copy.copy(op_player.pos),
-                        'life': op_player.life,
-                        'cards': copy.copy(op_player.card_box),
-                        'active_card': self.active_card,
-                        'accelerate': None if self.active_card[1] == CARD_DSPR else
-                        (-1 if op_player.action.acc < 0 else 1),
-                        'run_vector': None if self.active_card[1] == CARD_DSPR else
-                        (-1 if op_player.action.run < 0 else 1)}
-        dict_ball = {'position': copy.copy(self.ball.pos),
-                     'velocity': copy.copy(self.ball.velocity)}
-        dict_card = {'card_tick': self.card_tick,
-                     'cards': copy.copy(self.cards)}
+        dict_side = {
+            'name': player.name,
+            'position': copy.copy(player.pos),
+            'life': player.life,
+            'cards': copy.copy(player.card_box)}
+        dict_op_side = {
+            'name': op_player.name,
+            'position': None if self.active_card[1] == CARD_DSPR else copy.copy(op_player.pos),
+            'life': op_player.life,
+            'cards': copy.copy(op_player.card_box),
+            'active_card': self.active_card,
+            'accelerate': None if self.active_card[1] == CARD_DSPR else
+            (-1 if op_player.action.acc < 0 else 1),
+            'run_vector': None if self.active_card[1] == CARD_DSPR else
+            (-1 if op_player.action.run < 0 else 1)}
+        dict_ball = {
+            'position': copy.copy(self.ball.pos),
+            'velocity': copy.copy(self.ball.velocity)}
+        dict_card = {
+            'card_tick': self.card_tick,
+            'cards': copy.copy(self.cards)}
         # 调用，返回迎球方的动作
         player_action = player.play(TableData(self.tick, self.tick_step,
                                               dict_side, dict_op_side, dict_ball, dict_card),
@@ -420,7 +442,7 @@ class Table:  # 球桌
         player.update_pos_bat(self.tick_step, self.active_card)
         if not (player.pos == self.ball.pos):
             # 没接上球
-            print(player.pos, self.ball.pos)
+            print("player_pos:"+str(player.pos), "ball_pos:"+str(self.ball.pos))
             self.finished = True
             self.winner = self.op_side
             self.reason = "miss_ball"
@@ -444,6 +466,7 @@ class Table:  # 球桌
             self.reason = "life_out"
             return
 
+        self.card_tick += self.tick_step  # 道具计时增加
         self.tick += self.tick_step  # 时间从t0到t1
         if self.tick >= TMAX:
             # 时间到，生命值高的胜出
@@ -455,10 +478,22 @@ class Table:  # 球桌
         self.change_side()  # 换边迎球
         return
 
+    def postcare(self):  # 善后处理
+        west_player = self.players['West']
+        east_player = self.players['East']
+        west_player.summarize(self.tick, self.winner, self.reason,
+                              RacketData(west_player), RacketData(east_player),
+                              BallData(self.ball), west_player.datastore)
+        east_player.summarize(self.tick, self.winner, self.reason,
+                              RacketData(west_player), RacketData(east_player),
+                              BallData(self.ball), east_player.datastore)
+        return
+
 
 class LogEntry:
-    def __init__(self, tick, side, op_side, ball):
+    def __init__(self, tick, side, op_side, ball, card):
         self.tick = tick
         self.side = side
         self.op_side = op_side
         self.ball = ball
+        self.card = card

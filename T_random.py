@@ -1,4 +1,5 @@
 from table import *
+import random
 
 # 发球函数，总是做为West才发球
 # ds为函数可以利用的存储字典
@@ -11,7 +12,11 @@ def serve(ds:dict) -> tuple:
 # ds为函数可以利用的存储字典
 # 函数需要返回一个RacketAction对象
 def play(tb:TableData, ds:dict) -> RacketAction:
-    return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, 0, 0, None, None)
+    final_pos = random.sample([i for i in range(DIM[3]) if (i - tb.ball['position'].y) % 1800 ==0], 1)[0]
+    final_v1 = random.sample([i for i in range(DIM[3] + 1, 3*DIM[3] - 1) if (i - tb.ball['position'].y) % 1800 ==0], 1)[0]
+    final_v2 = random.sample([i for i in range(-2*DIM[3]+1, -1) if (i - tb.ball['position'].y) % 1800 ==0], 1)[0]
+    final_v = (random.sample([final_v1, final_v2], 1)[0] - tb.ball['position'].y) // 1800
+    return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, final_v - tb.ball['velocity'].y, final_pos-tb.ball['position'].y, None, None)
 
 # 对局后保存历史数据函数
 # ds为函数可以利用的存储字典

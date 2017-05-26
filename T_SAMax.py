@@ -3,7 +3,7 @@ from test import *
 import numpy as np
 
 Height = 1000000
-C = 0.5
+C = 0.67
 # 固定的V指向区间，默认以V=0时为取余数点。分为两个数组
 V_range = np.array([*np.arange(-1999800, -1800, 1800),*np.arange(1000800, 2998200, 1800)])
 Random = [np.random.random() for i in range(1000000)]
@@ -73,7 +73,7 @@ def getMax(v0, y0, target_range = None, T_start = 1000, gamma = 0.99, T_end = 20
         T_start *= gamma
         # print(current_v, current_value, sep = ',')
     v_best = (target_range[BSF[0]] - y0) // 1800
-    print(v_best)
+    # print(v_best)
     return v_best, BSF[1]
 
 

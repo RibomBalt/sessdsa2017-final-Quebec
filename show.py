@@ -155,6 +155,7 @@ def main():
     # 判断有无命令行参数
     if len(sys.argv) == 2:
         logname = sys.argv[1]
+        namelist = [logname]
     else:
         # 这里对当前目录进行搜索，找到一个字节数不为0的dat文件
         import os, re

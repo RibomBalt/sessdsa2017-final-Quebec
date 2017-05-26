@@ -3,9 +3,9 @@ from test import *
 import numpy as np
 
 Height = 1000000
-C = 1
+C = 0.5
 # 固定的V指向区间，默认以V=0时为取余数点。分为两个数组
-V_range = np.array([*np.arange(-1999800, -1800, 1800),*np.arange(1000800, 2998200, 1800)])
+V_range = np.array([*np.arange(-1999800, -1800, 1800),*np.arange(1000800, 2998800, 1800)])
 Random = [np.random.random() for i in range(1000000)]
 
 #返回真实点的高度
@@ -31,10 +31,10 @@ def op_player_f(v,v0,y0):
     """
     lose = int(((v - v0)/FACTOR_SPEED)**2)
     op_lose = int(((y2real(y0 - 1800*v0) - C*y2real(y0 + 1800*v))/FACTOR_DISTANCE)**2)
-    return lose - op_lose
+    return  - (lose - op_lose)
 
 
-def getMax(v0, y0, target_range = None, T_start = 1000, gamma = 0.99, T_end = 20, evaluate = op_player_f):
+def getMax(v0, y0, target_range = None, T_start = 1500, gamma = 0.99, T_end = 20, evaluate = op_player_f):
     """
     求给定一元函数求v_range最大值。使用模拟退火算法
     :param target_range: 指向对面坐标可以取值的范围
@@ -50,6 +50,8 @@ def getMax(v0, y0, target_range = None, T_start = 1000, gamma = 0.99, T_end = 20
     if target_range == None:
         # 获取符合这个y0的v范围
         target_range = V_range + y0 % 1800
+        if y0 % 1800 >= 1200:
+            target_range = target_range[:-1]
     current_v = int(len(V_range) * np.random.random())
     current_value = evaluate((target_range[current_v]-y0)//1800, v0, y0)
     # value_matrix = evaluate(target_range, v0, y0)
@@ -91,10 +93,15 @@ def play(tb: TableData, ds: dict) -> RacketAction:
     # return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, 0, 0)
     v0, y0 = tb.ball['velocity'].y, tb.ball['position'].y
     v_best = getMax(v0, y0)[0]
+    # 如果有道具，则对自己使用
+    if tb.cards['cards']:
+        side, item = 'SELF', tb.cards['cards'].pop(0)
+    else:
+        side, item = None, None
     return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y,
                         int(v_best-tb.ball['velocity'].y),
                         (500000 - tb.ball['position'].y)//2,
-                        None,None)
+                        side,item)
 
 def summarize(tick:int, winner:str, reason:str, west:RacketData, east:RacketData, ball:BallData, ds:dict):
     return

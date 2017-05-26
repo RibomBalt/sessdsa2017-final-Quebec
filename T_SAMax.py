@@ -5,10 +5,14 @@ import numpy as np
 import pandas as pd
 
 Height = 1000000
-C = 0.8
+C = 0.67
 # 固定的V指向区间，默认以V=0时为取余数点。分为两个数组
 V_range1 = np.arange(-1999800, -1800, 1800)
 V_range2 = np.arange(1000800, 2998800, 1800)
+# Series共用，V_range to Series
+Series1 = pd.Series(V_range1, index = V_range1)
+Series2 = pd.Series(V_range2, index = V_range2)
+
 Random = [np.random.random() for i in range(1000000)]
 # 球的
 Card_Value = {
@@ -24,13 +28,16 @@ Card_Value = {
 def y2real(y):
     # 关于np问题的过滤
     if type(y) is np.ndarray:
-        y_real = np.where(y % (2*Height) < Height, y % Height, 2*Height - y % Height)
+        y_real = np.where(y % (2*Height) < Height, y % Height, Height - y % Height)
         return y_real
     if y % (2*Height) < Height:
         y_real = y % Height
     else:
-        y_real = 2*Height - y % Height
+        y_real = Height - y % Height
     return y_real
+    # n_mirror, remain = divmod(y, DIM[3])
+    # # n_mirror是穿过墙的数目
+    # return {0: remain, 1: DIM[3] - remain}[n_mirror % 2]
 
 #对手的估值函数
 def op_player_f(v,v0,y0):
@@ -96,25 +103,30 @@ def getMax(v0, y0, target_range = None, T_start = 2000, gamma = 0.99, T_end = 2,
 
 def pandas_max(v0, y0, target_range = None):
     """
-    
+    pandas暴力求最值
+    熊猫就是无敌
     :param v0: 
     :param y0: 
     :param target_range: 
     :return: 
     """
-    if target_range == None:
+    if target_range is None:
         # 获取符合这个y0的v范围
         if v0 <= 0:
-            target_range = V_range1 + y0 % 1800
+            target_range = Series1 + y0 % 1800
         else:
-            target_range = V_range2 + y0 % 1800
+            target_range = Series2 + y0 % 1800
+            # 排除最后一个值超标的情况
             if y0 % 1800 >= 1200:
                 target_range = target_range[:-1]
-    series = pd.Series(target_range, index = target_range)
+        # 索引也同步增加
+        target_range.index += y0 % 1800
+
+    # print(np.nan in target_range)
     f = lambda v: op_player_f(v, v0, y0)
-    values = series.apply(f)
-    max_index = values.argmax()
-    return max_index, values[max_index]
+    values = target_range.apply(f)
+    max_v = values.argmax()
+    return (max_v - y0) // 1800, values[max_v]
 
 # t1 = time.time()
 # print(pandas_max(40,10000))
@@ -135,13 +147,18 @@ def play(tb: TableData, ds: dict) -> RacketAction:
     :return: RacketAction，保存了这次的球拍移动的四项信息。
     """
     # return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, 0, 0)
+    # t1 = time.time()
     v0, y0 = tb.ball['velocity'].y, tb.ball['position'].y
-    v_best = pandas_max(v0, y0)[0]
+    # 这里注释掉这句，是为了考虑是否取消启发式判断速度范围获取更大利益
+    # v_best1 = pandas_max(v0, y0)[0]
+    v_best = max((pandas_max(v0,y0,Series1),pandas_max(v0,y0,Series2)),key = lambda x:x[1])[0]
     # 如果有道具，则对自己使用
     if tb.cards['cards']:
         side, item = 'SELF', tb.cards['cards'].pop(0)
     else:
         side, item = None, None
+    # t2 = time.time()
+    # print(t1,t2,t2-t1)
     return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y,
                         int(v_best-tb.ball['velocity'].y),
                         (500000 - tb.ball['position'].y)//2,

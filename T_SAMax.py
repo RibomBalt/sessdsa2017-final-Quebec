@@ -63,7 +63,12 @@ def ball_fly(v, y0):
     :return: 速度，位置
     """
     # 对数字运算
+
     y = y0 + 1800 * v
+    if type(v) == np.ndarray:
+        y_real = np.where(y % (2 * Height) < Height, y % Height, Height - y % Height)
+        new_v = np.where(y % (2 * Height) < Height, v, -v)
+        return y_real, new_v
     if y % (2 * Height) < Height:
         y_real = y % Height
     else:

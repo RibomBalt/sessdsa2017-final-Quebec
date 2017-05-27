@@ -21,7 +21,7 @@ def play(tb:TableData, ds) -> RacketAction:
     bd = (tb.ball['position'].x,tb.ball['position'].y,tb.ball['velocity'].x,tb.ball['velocity'].y)
     # 创建player_data（迎球方）和op_player_data（跑位方）元组
     pd = (tb.side["life"])
-    opd = (tb.op_side["active_card"])
+    opd = (tb.op_side["life"], tb.op_side["active_card"])
     ##########然后调用下面的函数，传入tb,ds,bd,pd,opd############
     return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, 0, 0, None, None)
 
@@ -79,7 +79,7 @@ def ball_v_range(bd):
     return v0, v1, v2, v3
 
 
-def side_life_consume(pd, opd, tb, ds):
+def life_consume(pd, opd, tb, ds):
     """
     根据我方此次决策，算出迎球+加速+跑位的总体力消耗(考虑道具)
     :param player_data: 决策前迎球方的信息
@@ -92,7 +92,7 @@ def side_life_consume(pd, opd, tb, ds):
     :return: 执行完决策后我方体力值
     """
     p_life = pd[0]
-    op_active_card = opd[0]
+    op_active_card = opd[1]
     # 减少体力值（考虑跑位方可能使用掉血包道具）
     if opd.active_card == CARD_DECL:
         p_life -= CARD_DECL_PARAM
@@ -124,13 +124,16 @@ def side_life_consume(pd, opd, tb, ds):
     # 如果指定跑位的距离大于最大速度的距离，则采用最大速度距离
     run_distance = sign(player_action.run) * min(abs(player_action.run), velocity * STEP)
 
-    # 按照跑位的距离减少体力值（考虑跑位方之前可能使用变压器道具）
+    # 按照跑位的距离减少体力值（考虑跑位方之前可能使用瞬移卡道具）
     param = 0
     if player_action == CARD_TLPT:  # 如果碰到瞬移卡，则从距离减去CARD_TLPT_PARAM再计算体力值减少
         param = CARD_TLPT_PARAM
     if abs(run_distance) - param > 0:
         p_life -= (abs(run_distance) - param) ** 2 // FACTOR_DISTANCE ** 2
+    if player_action.card[1] == CARD_INCL:
+        p_life += CARD_INCL_PARAM
     return p_life
+
 
 def ball_fly_to_card(bd, card):
     """

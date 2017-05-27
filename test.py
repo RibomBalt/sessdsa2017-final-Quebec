@@ -5,8 +5,8 @@ STEP = 1800
 """
 修改内容：
 1.完善了速度取值的边界
-2.需要增加加血包的内容
-3.撞墙的判定可以用杨帆的函数，更加简洁
+2.撞墙的判定可以用杨帆的函数，更加简洁
+3.目前没有加血包和减血包的情况
 """
 
 '''
@@ -40,6 +40,8 @@ class op_player_data():
     def __init__(self, tb):
         self.active_card = tb.op_side["active_card"]
 
+'''
+# 这是原始的fly函数
 def ball_fly_to(bd:ball_data):
     """
     根据我方出射点坐标、出射速度，算出到达对方位置
@@ -70,14 +72,45 @@ def ball_fly_to(bd:ball_data):
     # 计算并更新y轴速度
     bd.vel_y = bd.vel_y * ((count + 1) % 2 * 2 - 1)
     return abs(count), bd
+'''
 
+def ball_fly_to(bd:ball_data):
+    """
+    根据我方出射点坐标、出射速度，算出到达对方位置
+    :param tb.step: 1800 tick
+    :param Y: 镜像点y坐标
+    :param count: 与桌碰撞次数，可正可负
+    :param height: 乒乓球桌的宽度, DIM[3] - DIM[2]
+    :return: 与桌碰撞次数
+    """
+    # x方向的位置更新
+    # tb.step 为 1800 tick
+    bd.pos_x += bd.vel_x * STEP
+    # Y 为没有墙壁时乒乓球到达的位置（镜像点）
+    Y = bd.vel_y * STEP + bd.pos_y
+    # 把镜像点转化为真实点
+    bd.pos_y = mirror2real(Y)[0]
+    # 计算并更新y轴速度
+    count = mirror2real(Y)[1]
+    bd.vel_y = bd.vel_y * ((count + 1) % 2 * 2 - 1)
+    return bd, abs(count)
+
+def mirror2real(y_axis:int):
+    """
+    将镜像点映射为真实点
+    :param y_axis: 镜像点y坐标
+    :return: 真实点y坐标，范围0-1,000,000
+    """
+    n_mirror, remain = divmod(y_axis, DIM[3] - DIM[2])
+    # n_mirror是穿过墙的数目，可正可负
+    return {0:remain, 1:DIM[3] - remain}[n_mirror % 2], n_mirror
 
 def ball_v_range(bd:ball_data):
     """
     根据我方出射点坐标，算出y轴可取速度的边界值
     :param tb.step: 1800 tick
     :param Y: 镜像点y坐标
-    :param height: 乒乓球桌的宽度, D                                                                                                                     IM[3] - DIM[2]
+    :param height: 乒乓球桌的宽度, DIM[3] - DIM[2]
     :return: 与桌碰撞次数
     """
     height = DIM[3] - DIM[2]
@@ -96,7 +129,7 @@ def side_life_consume(pd:player_data, opd:op_player_data, tb:TableData, ds):
     """
     根据我方此次决策，算出迎球+加速+跑位的总体力消耗(考虑道具)
     :param player_data: 决策前迎球方的信息
-    :param o      p_player_data: 决策前跑位方的信息
+    :param op_player_data: 决策前跑位方的信息
     :param player_action: 我方此次决策结果 RocketAction类
     :param bat_distance: 此次决策指定迎球的距离
     :param run_distance: 此次决策指定跑位的距离
@@ -118,7 +151,7 @@ def side_life_consume(pd:player_data, opd:op_player_data, tb:TableData, ds):
     player_action.normalize()
     # 球拍的全速是球X方向速度，按照体力值比例下降
     velocity = int((pd.life / RACKET_LIFE) * BALL_V[1])
-    # bat_distance 为 指定迎球的距离
+    # bat_distance 为指定迎球的距离
     bat_distance = player_action.bat
     # 如果指定迎球的距离大于最大速度的距离，则丢球，比赛结束
     if abs(bat_distance) > velocity * tb.step:
@@ -162,28 +195,4 @@ def get_op_acc(bd:ball_data):
     # 暂时搁置
 '''
 
-####################################################################
-
-# 这里是杨帆的处理方式，因为所有点都是整数，那么假设墙壁不存在
-# 这里是金恬的意见：我看不懂第二个函数在干吗...o_axis哪里冒出来的？
-# 如果我看懂了...第二个函数可以用于我的ball_fly_to(tb)和get_op_acc(tb)函数。
-def yspeed2mirror(y_speed:int, o_axis:int):
-    """
-    将镜像点映射为真实点
-    :param y_speed: y向速度
-    :param o_axis: 发球点的y坐标，原点、镜点均可
-    :return: 返回打到的镜点
-    """
-    # 目前没有更加方便借鉴的常数
-    return o_axis + y_speed * 1800
-
-def mirror2real(y_axis:int):
-    """
-    将镜像点映射为真实点
-    :param y_axis: 镜像点y坐标
-    :return: 真实点y坐标，范围0-1,000,000
-    """
-    n_mirror, remain = divmod(y_axis, DIM[3] - DIM[2])
-    # n_mirror是穿过墙的数目，可正可负
-    return {0:remain, 1:DIM[3] - remain}[n_mirror % 2]
 

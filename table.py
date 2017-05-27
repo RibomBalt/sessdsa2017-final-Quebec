@@ -98,12 +98,11 @@ class Vector:  # 矢量
     def __add__(self, other):
         return self.__class__(self.x + other.x, self.y + other.y)
 
-    def __eq__(self, other):  # 判定相等，考虑误差+／-1
-        return abs(self.x - other.x) <= 1 and abs(self.y - other.y) <= 1
+    def __eq__(self, other):  # 判定相等，考虑误差+／-2000
+        return abs(self.x - other.x) <= 2000 and abs(self.y - other.y) <= 2000
 
     def __str__(self):
         return "<%s,%s>" % (self.x, self.y)
-    __repr__ = __str__
 
     __repr__ = __str__
 
@@ -133,7 +132,7 @@ class Ball:  # 球
 
     # 以下是李逸飞同学的超强算法
     # 用于检测是否得到道具。有错误的话，锅由李逸飞来背。邮箱：1500012435@pku.edu.cn
-    def get_card(self, card, eps=1):
+    def get_card(self, card, eps=2000):
         # 多写点注释。self.pos:(x0,y0),card.pos:(x1,y1),self.velocity:(u,v),self.extent[3]=L
         # 直线方程为 l:-v*x+u*y+v*x0-u*y0=0
         # card经过多次对称后，位置为(x1,±y1+2*k*l)
@@ -148,6 +147,12 @@ class Ball:  # 球
     def fly(self, ticks, list_cards):  # 球运动，更新位置，并返回触壁次数和路径经过的道具（元组）
         # 判断card.pos，如果球经过的话，就返回count的同时返回所有经过的道具列表，并从list_cards中移除。
         hit_cards = [card for card in list_cards if self.get_card(card)]
+        # 对获得的道具按照获取时间先后进行排序
+        if self.velocity.x > 0:
+            hit_cards.sort(key=lambda card: card.pos.x)
+        else:
+            hit_cards.sort(key=lambda card: -card.pos.x)
+        # 从球桌上删除被获取的道具
         for card in hit_cards:
             list_cards.remove(card)
 
@@ -164,7 +169,7 @@ class Ball:  # 球
             count = Y // self.extent[3]  # 穿过了多少次墙（可以是负的，最后取绝对值）
 
             # 两种情形：a） 穿过偶数次墙，这时没有对称变换，速度保持不变。到达的位置就是Y0=Y-self.extent[3]*count
-            #           b） 穿过奇数次墙，是一次对称和一次平移的复合，速度反向。先做平移，到达Y0=Y-self.extent[3]*count，再反射，到self.extent[3]-Y0
+            #         b） 穿过奇数次墙，是一次对称和一次平移的复合，速度反向。先做平移，到达Y0=Y-self.extent[3]*count，再反射，到self.extent[3]-Y0
             # 综合两种情形，奇数时Y0是负的，多一个self.extent[3];偶数时Y0是正的，没有self.extent[3]。综上，ynew=Y0*(-1)^count+(1-(-1)^count)/2*self.extent[3]
             # 因不清楚负数能不能做任意整指数幂，所以用取余来表示奇偶性。
 
@@ -243,6 +248,7 @@ class Racket:  # 球拍
     def __init__(self, side, pos):  # 选边'West'／'East'和位置
         self.side, self.pos = side, pos
         self.life = RACKET_LIFE
+        self.bat_lf = self.run_lf = self.acc_lf = self.card_lf = 0  #各种操作对生命值的损耗
         self.name = self.serve = self.play = self.summarize = None
         self.action = self.datastore = None
         self.card_box = CardBox()  # 道具箱，本方拥有的道具，不超过MAX_CARDS个，超过的话按照队列形式删除旧的道具。
@@ -271,8 +277,9 @@ class Racket:  # 球拍
         bat_distance = sign(self.action.bat) * min(abs(self.action.bat), self.get_velocity() * tick_step)
         self.pos.y += bat_distance
         # 减少生命值
-        self.life -= (abs(bat_distance) ** 2 // FACTOR_DISTANCE ** 2) * \
-                     (CARD_AMPL_PARAM if active_card[1] == CARD_AMPL else 1)
+        self.bat_lf = -(abs(bat_distance) ** 2 // FACTOR_DISTANCE ** 2) * \
+                      (CARD_AMPL_PARAM if active_card[1] == CARD_AMPL else 1)
+        self.life += self.bat_lf
 
     def update_pos_run(self, tick_step, active_card):
         # 如果指定跑位的距离大于最大速度的距离，则采用最大速度距离
@@ -280,15 +287,18 @@ class Racket:  # 球拍
         self.pos.y += run_distance
         # 减少生命值
         param = 0
+        self.run_lf = 0
         if active_card[1] == CARD_TLPT:  # 如果碰到瞬移卡，则从距离减去CARD_TLPT_PARAM再计算体力值减少
             param = CARD_TLPT_PARAM
         if abs(run_distance) - param > 0:
-            self.life -= (abs(run_distance) - param) ** 2 // FACTOR_DISTANCE ** 2
+            self.run_lf = -(abs(run_distance) - param) ** 2 // FACTOR_DISTANCE ** 2
+            self.life += self.run_lf
 
     def update_acc(self, active_card):
         # 按照给球加速度的指标减少生命值
-        self.life -= (abs(self.action.acc) ** 2 // FACTOR_SPEED ** 2) * \
-                     (CARD_AMPL_PARAM if active_card[1] == CARD_AMPL else 1)
+        self.acc_lf = -(abs(self.action.acc) ** 2 // FACTOR_SPEED ** 2) * \
+                      (CARD_AMPL_PARAM if active_card[1] == CARD_AMPL else 1)
+        self.life += self.acc_lf
 
 
 class TableData:  # 球桌信息，player计算用
@@ -304,6 +314,7 @@ class TableData:  # 球桌信息，player计算用
 class RacketData:  # 球拍信息，记录日志用
     def __init__(self, racket):
         self.side, self.name, self.life = racket.side, racket.name, racket.life
+        self.bat_lf, self.acc_lf, self.run_lf, self.card_lf = racket.bat_lf, racket.acc_lf, racket.run_lf, racket.card_lf
         self.pos, self.action = copy.copy(racket.pos), copy.copy(racket.action)
         self.card_box = copy.copy(racket.card_box)
 
@@ -318,9 +329,10 @@ class BallData:  # 球的信息，记录日志用
 
 
 class CardData:  # 道具信息，记录日志用
-    def __init__(self, card_tick, cards):
+    def __init__(self, card_tick, cards, active_card):
         self.card_tick = card_tick
         self.cards = copy.copy(cards)  # 道具对象的列表，数量上限为MAX_TABLE_CARDS
+        self.active_card = active_card # (<被用道具方West/East>, <道具代码>)
 
 
 class Table:  # 球桌
@@ -393,15 +405,18 @@ class Table:  # 球桌
         self.deploy_card()
 
         # 让跑位方的道具生效
+        # active_card=(<被用道具方West/East>, <道具代码>)
         self.active_card = op_player.action.card
+        player.card_lf = 0
+        op_player.card_lf = 0
         if self.active_card[1] == CARD_DECL:
             # 让迎球方掉血
-            player.life -= CARD_DECL_PARAM
-
+            player.card_lf = - CARD_DECL_PARAM
+            player.life += player.card_lf
         if self.active_card[1] == CARD_INCL:
             # 让跑位方加血
-            op_player.life += CARD_INCL_PARAM
-
+            op_player.card_lf = CARD_INCL_PARAM
+            op_player.life += op_player.card_lf
         # 3，调用迎球方的算法
         #    参数：t0时刻双方位置和体力值，以及跑位方的跑位方向；
         #    参数：球在t1时刻的位置和速度
@@ -440,7 +455,7 @@ class Table:  # 球桌
         player.update_pos_bat(self.tick_step, self.active_card)
         if not (player.pos == self.ball.pos):
             # 没接上球
-            print("player_pos:"+str(player.pos), "ball_pos:"+str(self.ball.pos))
+            print("player_pos:" + str(player.pos), "ball_pos:" + str(self.ball.pos))
             self.finished = True
             self.winner = self.op_side
             self.reason = "miss_ball"

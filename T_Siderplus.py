@@ -4,6 +4,16 @@ import time
 import numpy as np
 import pandas as pd
 
+# 发球函数，总是做为West才发球
+# ds为函数可以利用的存储字典
+# 函数需要返回球的y坐标，和y方向的速度
+def serve(ds:dict) -> tuple:
+    return BALL_POS[1], (1800000 - BALL_POS[1]) // 1800 + 1
+
+# 打球函数
+# tb为TableData类型的对象
+# ds为函数可以利用的存储字典
+# 函数需要返回一个RacketAction对象
 Height = 1000000
 C = 0.67
 # 固定的V指向区间，默认以V=0时为取余数点。分为两个数组
@@ -50,7 +60,7 @@ def op_player_f(v, v0, y0):
     :param v: 打过去的速度
     :param v0: 接到时的速度
     :param y0: 接到的位置
-    :return: 
+    :return:
     """
     lose = int(((v - v0) / FACTOR_SPEED) ** 2)
     op_lose = int(((y2real(y0 - 1800 * v0) - y2real(y0 + 1800 * v)) / FACTOR_DISTANCE) ** 2) * C
@@ -84,13 +94,13 @@ def getMax(v0, y0, target_range=None, T_start=2000, gamma=0.99, T_end=2, evaluat
     """
     求给定一元函数求v_range最大值。使用模拟退火算法
     :param target_range: 指向对面坐标可以取值的范围
-    :param T_end: 
-    :param gamma: 
-    :param T_start: 
-    :param v0: 
-    :param y0: 
-    :param evaluate: 
-    :return: 
+    :param T_end:
+    :param gamma:
+    :param T_start:
+    :param v0:
+    :param y0:
+    :param evaluate:
+    :return:
     """
     # 首先做v1
     if target_range == None:
@@ -132,9 +142,9 @@ def pandas_max(v0, y0, target_range=None, evaluate=op_player_f):
     """
     pandas暴力求最值
     熊猫就是无敌
-    :param v0: 
-    :param y0: 
-    :param target_range: 
+    :param v0:
+    :param y0:
+    :param target_range:
     :return: 对方返回的速度、相应估值
     """
     if target_range is None:
@@ -165,10 +175,10 @@ def pandas_max(v0, y0, target_range=None, evaluate=op_player_f):
 def player_f(v, v0, y0):
     """
     我方估值函数。算两层
-    :param v: 
-    :param v0: 
-    :param y0: 
-    :return: 
+    :param v:
+    :param v0:
+    :param y0:
+    :return:
     """
     # 对方发球位置
     y1 = y2real(y0 - 1800 * v0)
@@ -190,26 +200,42 @@ def player_f(v, v0, y0):
     # 返回对方减少 - 我方减少。这个尽可能大
     return v, op_lose - lose, y3
 
-
-def serve(ds):
-    return BALL_POS[1], (1800000 - BALL_POS[1]) // 1800 + 1
-
-
-def play(tb: TableData, ds: dict) -> RacketAction:
+def ball_v_range_up(bd:ball_data):
     """
-    主函数，每次游戏进程会调用这个函数
-    :param tb: TableData，桌面数据情况。
-    :param ds: dict，临时存储数据的字典
-    :return: RacketAction，保存了这次的球拍移动的四项信息。
+    根据我方出射点坐标，算出y轴可取速度的边界值
+    :param tb.step: 1800 tick
+    :param Y: 镜像点y坐标
+    :param height: 乒乓球桌的宽度, DIM[3] - DIM[2]
+    :return: 与桌碰撞次数
     """
-    # return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, 0, 0)
-    # t1 = time.time()
-    # print(t1)
+    #delta_height = 300
+    v0 = (1 * Height - bd.pos_y) // STEP + 1
+    v1 = (3 * Height - bd.pos_y) // STEP - 10
+    v2 = (-1 * Height - bd.pos_y) // STEP + 1
+    return v0, v1, v2
+
+def ball_v_range_down(bd:ball_data):
+    """
+    根据我方出射点坐标，算出y轴可取速度的边界值
+    :param tb.step: 1800 tick
+    :param Y: 镜像点y坐标
+    :param height: 乒乓球桌的宽度, DIM[3] - DIM[2]
+    :return: 与桌碰撞次数
+    """
+    #delta_height = 300
+    v0 = (-2* Height - bd.pos_y) // STEP + 1
+    v1 = (2 * Height - bd.pos_y) // STEP + 1
+    v2 = (- bd.pos_y) // STEP - 1
+    return v0, v1, v2
+
+def play(tb:TableData, ds:dict) -> RacketAction:
+    times = tb.tick/1800
+    bd = ball_data(tb)
+    pd = player_data(tb)
+    opd = op_player_data(tb)
+
     v0, y0 = tb.ball['velocity'].y, tb.ball['position'].y
-    # # 这里注释掉这句，是为了考虑是否取消启发式判断速度范围获取更大利益
-    # # v_best1 = pandas_max(v0, y0)[0]
-    #
-    # v_best = max((pandas_max(v0, y0, Series1), pandas_max(v0, y0, Series2)), key=lambda x: x[1])[0]
+
     v_best = max((pandas_max(v0, y0, Series1, lambda v: player_f(v, v0, y0)[1]),
                   pandas_max(v0, y0, Series2, lambda v: player_f(v, v0, y0)[1])), key=lambda x: x[1])[0]
     y2reach = player_f(v_best, v0, y0)[2]
@@ -218,37 +244,29 @@ def play(tb: TableData, ds: dict) -> RacketAction:
         side, item = 'SELF', tb.cards['cards'].pop(0)
     else:
         side, item = None, None
-    # t2 = time.time()
-    # print(t1, t2, t2 - t1)
+        #计算速度范围
+    #t = random.randint(0,1)
+    if times%4 in (1,2):
+        v_range = ball_v_range_up(bd)
+    else:
+        v_range = ball_v_range_down(bd)
+    # 计算介于可行范围内的最小的目标v
 
-    # if v0 < 0:
-    #     vy = -1 - y0 // 1800
-    # else:
-    #     vy = 557 - y0 //1
+    min_index = v_range.index(min(v_range, key=lambda x: abs(x - tb.ball['velocity'].y)))
+    # 是大值则-1，小值则+1
+    target = v_range[min_index] + 1 - tb.ball['velocity'].y
 
+    # 如果有道具，则对自己使用
+    if tb.cards['cards']:
+        side, item = 'SELF', tb.cards['cards'].pop(0)
+    else:
+        side, item = None, None
+    # 返回
     return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y,
-                        int(v_best - tb.ball['velocity'].y),
-                        (y2reach - tb.ball['position'].y) // 2,
-                        side, item)
+                        target, (y2reach - tb.ball['position'].y)//2, side, item)
 
-
-def summarize(tick: int, winner: str, reason: str, west: RacketData, east: RacketData, ball: BallData, ds: dict):
+# 对局后保存历史数据函数
+# ds为函数可以利用的存储字典
+# 本函数在对局结束后调用，用于双方分析和保存历史数据
+def summarize(tick:int, winner:str, reason:str, west:RacketData, east:RacketData, ball:BallData, ds:dict):
     return
-
-
-#
-# import time
-# a = time.time()
-# print(getMax(455,16000))
-# b=time.time()
-# print(a,b,b-a)
-
-
-def evaluate(bd, pd, opd):
-    """
-
-    :param bd: 
-    :param pd: 
-    :param opd: 
-    :return: 
-    """

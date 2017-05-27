@@ -24,7 +24,7 @@ def play(tb:TableData, ds:dict) -> RacketAction:
 
     min_index = v_range.index(min(v_range, key=lambda x: abs(x - tb.ball['velocity'].y)))
     # 是大值则-1，小值则+1
-    target = v_range[min_index] + 1 - tb.ball['velocity'].y
+    target = v_range[min_index] - tb.ball['velocity'].y
 
     # 如果有道具，则对自己使用
     if tb.cards['cards']:

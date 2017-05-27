@@ -31,7 +31,7 @@ def race(west_name, west_serve, west_play, west_summarize,
                             RacketData(main_table.players[main_table.side]),
                             RacketData(main_table.players[main_table.op_side]),
                             BallData(main_table.ball),
-                            CardData(main_table.card_tick, main_table.cards)))
+                            CardData(main_table.card_tick, main_table.cards, main_table.active_card)))
         # 运行一趟
         main_table.time_run()
 
@@ -40,7 +40,7 @@ def race(west_name, west_serve, west_play, west_summarize,
                         RacketData(main_table.players[main_table.side]),
                         RacketData(main_table.players[main_table.op_side]),
                         BallData(main_table.ball),
-                        CardData(main_table.card_tick, main_table.cards)))
+                        CardData(main_table.card_tick, main_table.cards, main_table.active_card)))
 
     # 终局，让双方进行本局总结
     main_table.postcare()
@@ -71,17 +71,22 @@ def race(west_name, west_serve, west_play, west_summarize,
     print("Eastlife:" + str(main_table.players['East'].life))
 
     # 终局打印信息输出
-    print("%s win! for %s, West:%s, East:%s" % (main_table.winner, main_table.reason,
-                                                west_name, east_name))
+    print("%s win! for %s, West:%s(%d）, East:%s(%d),总时间: %d tick" %
+          (main_table.winner, main_table.reason,
+           west_name, main_table.players['West'].life,
+           east_name, main_table.players['East'].life, main_table.tick))
 
 
 import os
 
 # 取得所有以T_开始文件名的算法文件名
 # players = [f[:-3] for f in os.listdir('.') if os.path.isfile(f) and f[-3:] == '.py' and f[:2] == 'T_']
-players = ['T_SAMax', 'T_random']
+players = ['T_Bamboo', 'T_Sider']
+i = 0
 for west_name in players:
-    for east_name in players:
+    for east_name in filter(lambda x: x != west_name, players):
+        print('----------------------''第', i, '局''-------------------------')
         exec('import %s as WP' % (west_name,))
         exec('import %s as EP' % (east_name,))
         race(west_name, WP.serve, WP.play, WP.summarize, east_name, EP.serve, EP.play, EP.summarize)
+        i = i + 1

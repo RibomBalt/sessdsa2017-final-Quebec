@@ -4,20 +4,33 @@ import numpy as np
 
 Height = 1000000
 C = 0.67
-# 固定的V指向区间，默认以V=0时为取余数点。分为两个数组
-V_range = np.array([*np.arange(-1999800, -1800, 1800),*np.arange(1000800, 2998200, 1800)])
+# 固定的V指向区间，默认以V=0时为取余数点。分为两个数组，符合test.py里的速度范围
+V_range = np.array([*np.arange(-1999800, -1800, 1800),*np.arange(1000800, 2998800, 1800)])
 Random = [np.random.random() for i in range(1000000)]
 
 #返回真实点的高度
 def y2real(y):
+    """
+    将镜像点映射为真实点
+    :param y: 镜像点y坐标
+    :param y_real: 真实点y坐标
+    :return: 真实点y坐标，范围0-1,000,000
+    """
     # 关于np问题的过滤
     if type(y) is np.ndarray:
         y_real = np.where(y % (2*Height) < Height, y % Height, 2*Height - y % Height)
         return y_real
+    '''
+    # 原代码
     if y % (2*Height) < Height:
         y_real = y % Height
     else:
-        y_real = 2*Height - y % Height
+        y_real = 2 * Height - y % Height
+    '''
+    # 修改后
+    n_mirror, remain = divmod(y, Height)
+    # n_mirror是穿过墙的数目，可正可负
+    y_real = {0: remain, 1: Height - remain}[n_mirror % 2]
     return y_real
 
 #对手的估值函数

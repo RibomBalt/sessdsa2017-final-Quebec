@@ -176,10 +176,7 @@ def player_f(v, v0, y0):
     v_in, y2 = ball_fly(v, y0)
     # 对方打回的速度
     # TODO 用对方函数算一个最小值出来，修改op_player_f估值为负
-    if v0 < 0:
-        vy = -1 - y0 / 1800 + v0
-    else:
-        vy = 557 - y0 / 1800 + v0
+    vy = (1000600 - y2) / 1800
     v_out = vy
     # 打回的位置
     y3 = y2real(y2 + 1800 * v_out)
@@ -188,7 +185,7 @@ def player_f(v, v0, y0):
     lose = ((v - v0) / FACTOR_SPEED) ** 2 + 0.5 * ((y0 - y3) / FACTOR_DISTANCE) ** 2  # 己方损失
     op_lose = ((v_out - v_in) / FACTOR_SPEED) ** 2 + C * ((y1 - y2) / FACTOR_DISTANCE) ** 2  # 对方损失
     # 返回对方减少 - 我方减少。这个尽可能大
-    return v, op_lose - lose
+    return (v,y3), op_lose - lose
 
 
 def serve(ds):
@@ -212,6 +209,8 @@ def play(tb: TableData, ds: dict) -> RacketAction:
     # v_best = max((pandas_max(v0, y0, Series1), pandas_max(v0, y0, Series2)), key=lambda x: x[1])[0]
     v_best = max((pandas_max(v0, y0, Series1, lambda v: player_f(v, v0, y0)[1]),
                   pandas_max(v0, y0, Series2, lambda v: player_f(v, v0, y0)[1])), key=lambda x: x[1])[0]
+
+    x_best = player_f(v_best,v0,y0)[0][1]
     # 如果有道具，则对自己使用
     if tb.cards['cards']:
         side, item = 'SELF', tb.cards['cards'].pop(0)
@@ -227,7 +226,7 @@ def play(tb: TableData, ds: dict) -> RacketAction:
 
     return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y,
                         int(v_best - tb.ball['velocity'].y),
-                        (500000 - tb.ball['position'].y) // 2,
+                        (x_best + tb.ball['position'].y) // 2,
                         side, item)
 
 

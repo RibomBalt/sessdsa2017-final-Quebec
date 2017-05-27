@@ -14,7 +14,7 @@ STEP = 1800
 def pretend_play(tb:TableData, ds) -> RacketAction:
     return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, 0, 0, None, None)
 
-'''
+
 # 打球函数
 def play(tb:TableData, ds) -> RacketAction:
     # 创建ball_data元组
@@ -24,7 +24,7 @@ def play(tb:TableData, ds) -> RacketAction:
     opd = (tb.op_side["active_card"])
     ##########然后调用下面的函数，传入tb,ds,bd,pd,opd############
     return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, 0, 0, None, None)
-'''
+
 
 def ball_fly_to(bd):
     """
@@ -36,15 +36,16 @@ def ball_fly_to(bd):
     """
     # x方向的位置更新
     # tb.step 为 1800 tick
-    bd[0] += bd[2] * STEP
+    x0, y0, vx0, vy0 = bd
+    x = x0 + vx0 * STEP
     # Y 为没有墙壁时乒乓球到达的位置（镜像点）
-    Y = bd[3] * STEP + bd[1]
+    Y = y0 + vy0 * STEP
     # 把镜像点转化为真实点
-    bd[1] = mirror2real(Y)[0]
+    y = mirror2real(Y)[0]
     # 计算并更新y轴速度
     count = mirror2real(Y)[1]
-    bd[3] = bd[3] * ((count + 1) % 2 * 2 - 1)
-    return bd, abs(count)
+    vy = vy0 * ((count + 1) % 2 * 2 - 1)
+    return x, y, vx0, vy, abs(count)
 
 def mirror2real(y_axis:int):
     """
@@ -63,16 +64,17 @@ def ball_v_range(bd):
     :param tb.step: 1800 tick
     :param Y: 镜像点y坐标
     :param height: 乒乓球桌的宽度, DIM[3] - DIM[2]
-    :return: 与桌碰撞次数
+    :return: 与桌碰撞次数  
     """
+    y0 = bd[1]
     height = DIM[3] - DIM[2]
     # v0,v1,v2,v3是速度的范围边界:可取[v3,v2]∪[v1,v0]
-    v0 = (3 * height - bd[1]) // STEP
-    v1 = (1 * height - bd[1]) // STEP + 1
-    v2 = (0 - bd[1]) // STEP
-    v3 = (-2 * height - bd[1]) // STEP + 1
+    v0 = (3 * height - y0) // STEP
+    v1 = (1 * height - y0) // STEP + 1
+    v2 = (0 - y0) // STEP
+    v3 = (-2 * height - y0) // STEP + 1
     # 贴边打的情况算作反弹零次，需要排除
-    if bd[1] == 0:
+    if y0 == 0:
         v2 = -1
     return v0, v1, v2, v3
 
@@ -89,9 +91,11 @@ def side_life_consume(pd, opd, tb, ds):
     :param opd: (tb.op_side["active_card"])
     :return: 执行完决策后我方体力值
     """
+    p_life = pd[0]
+    op_active_card = opd[0]
     # 减少体力值（考虑跑位方可能使用掉血包道具）
     if opd.active_card == CARD_DECL:
-        pd[0] -= CARD_DECL_PARAM
+        p_life -= CARD_DECL_PARAM
     # 获取我方此次决策结果
     player_action = pretend_play(tb, ds)
     '''
@@ -104,7 +108,7 @@ def side_life_consume(pd, opd, tb, ds):
     # 将迎球方动作中的距离速度等值规整化为整数
     player_action.normalize()
     # 球拍的全速是球X方向速度，按照体力值比例下降
-    velocity = int((pd[0] / RACKET_LIFE) * BALL_V[1])
+    velocity = int((p_life / RACKET_LIFE) * BALL_V[1])
     # bat_distance 为指定迎球的距离
     bat_distance = player_action.bat
     # 如果指定迎球的距离大于最大速度的距离，则丢球，比赛结束
@@ -112,10 +116,10 @@ def side_life_consume(pd, opd, tb, ds):
         return False
 
     # 按照迎球的距离减少体力值（考虑跑位方之前可能使用变压器道具）
-    pd[0] -= (abs(bat_distance) ** 2 // FACTOR_DISTANCE ** 2) * (CARD_AMPL_PARAM if opd[0] == CARD_AMPL else 1)
+    p_life -= (abs(bat_distance) ** 2 // FACTOR_DISTANCE ** 2) * (CARD_AMPL_PARAM if op_active_card == CARD_AMPL else 1)
 
     # 按照给球加速度的指标减少体力值（考虑跑位方之前可能使用变压器道具）
-    pd[0] -= (abs(player_action.acc) ** 2 // FACTOR_SPEED ** 2) * (CARD_AMPL_PARAM if opd[0] == CARD_AMPL else 1)
+    p_life -= (abs(player_action.acc) ** 2 // FACTOR_SPEED ** 2) * (CARD_AMPL_PARAM if op_active_card == CARD_AMPL else 1)
 
     # 如果指定跑位的距离大于最大速度的距离，则采用最大速度距离
     run_distance = sign(player_action.run) * min(abs(player_action.run), velocity * STEP)
@@ -125,8 +129,8 @@ def side_life_consume(pd, opd, tb, ds):
     if player_action == CARD_TLPT:  # 如果碰到瞬移卡，则从距离减去CARD_TLPT_PARAM再计算体力值减少
         param = CARD_TLPT_PARAM
     if abs(run_distance) - param > 0:
-        pd[0] -= (abs(run_distance) - param) ** 2 // FACTOR_DISTANCE ** 2
-    return pd[0]
+        p_life -= (abs(run_distance) - param) ** 2 // FACTOR_DISTANCE ** 2
+    return p_life
 
 def ball_fly_to_card(bd, card):
     """
@@ -136,6 +140,7 @@ def ball_fly_to_card(bd, card):
     :param height: 球桌宽度，DIM[3] - DIM[2]
     :return: 符合要求的竖直速度
     """
+    y0, vx0 = bd[1], bd[2]
     height = DIM[3] - DIM[2]
     # 满足规则（碰撞1-2次）的速度区间[v3,v2]∪[v1,v0]
     v0, v1, v2, v3 = ball_v_range(bd)
@@ -147,10 +152,10 @@ def ball_fly_to_card(bd, card):
     y[3] = -card.pos[1]
     y[4] = -2 * height + card.pos[1]
     # 到达道具位置用时
-    card_step = card.pos[0] // bd[2]
+    card_step = card.pos[0] // vx0
     # 合法的竖直速度
     return filter(lambda v_y: (v_y >= v3 and v_y <= v2)or(v_y >= v1 and v_y <= v0),
-               map(lambda x: (x - bd[1]) // card_step, y))
+               map(lambda x: (x - y0) // card_step, y))
 
 '''
 # 这是原始的fly函数

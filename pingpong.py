@@ -81,10 +81,10 @@ import os
 
 # 取得所有以T_开始文件名的算法文件名
 # players = [f[:-3] for f in os.listdir('.') if os.path.isfile(f) and f[-3:] == '.py' and f[:2] == 'T_']
-players = ['T_SAMax', 'T_Sider']
+players = ['T_Bamboo', 'T_Sider']
 i = 0
 for west_name in players:
-    for east_name in players:
+    for east_name in filter(lambda x: x != west_name, players):
         print('----------------------''第', i, '局''-------------------------')
         exec('import %s as WP' % (west_name,))
         exec('import %s as EP' % (east_name,))

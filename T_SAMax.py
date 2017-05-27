@@ -10,27 +10,28 @@ C = 0.67
 V_range1 = np.arange(-1999800, -1800, 1800)
 V_range2 = np.arange(1000800, 2998800, 1800)
 # Series共用，V_range to Series
-Series1 = pd.Series(V_range1, index = V_range1)
-Series2 = pd.Series(V_range2, index = V_range2)
+Series1 = pd.Series(V_range1, index=V_range1)
+Series2 = pd.Series(V_range2, index=V_range2)
 
 Random = [np.random.random() for i in range(1000000)]
 # 球的
 Card_Value = {
-    'SP':500,
-    'DS':0,
-    'IL':2000,
-    'DL':2000,
-    'TP':1000,
-    'AM':1500,
+    'SP': 500,
+    'DS': 0,
+    'IL': 2000,
+    'DL': 2000,
+    'TP': 1000,
+    'AM': 1500,
 }
 
-#返回真实点的高度
+
+# 返回真实点的高度
 def y2real(y):
     # 关于np问题的过滤
     if type(y) is np.ndarray:
-        y_real = np.where(y % (2*Height) < Height, y % Height, Height - y % Height)
+        y_real = np.where(y % (2 * Height) < Height, y % Height, Height - y % Height)
         return y_real
-    if y % (2*Height) < Height:
+    if y % (2 * Height) < Height:
         y_real = y % Height
     else:
         y_real = Height - y % Height
@@ -39,8 +40,9 @@ def y2real(y):
     # # n_mirror是穿过墙的数目
     # return {0: remain, 1: DIM[3] - remain}[n_mirror % 2]
 
-#对手的估值函数
-def op_player_f(v,v0,y0):
+
+# 对手的估值函数
+def op_player_f(v, v0, y0):
     """
     对手估值函数
     :param v: 打过去的速度
@@ -48,13 +50,13 @@ def op_player_f(v,v0,y0):
     :param y0: 接到的位置
     :return: 
     """
-    lose = int(((v - v0)/FACTOR_SPEED)**2)
-    op_lose = int(((y2real(y0 - 1800*v0) - y2real(y0 + 1800*v))/FACTOR_DISTANCE)**2)*C
-    # v_fix =
-    return   -(lose - op_lose)
+    lose = int(((v - v0) / FACTOR_SPEED) ** 2)
+    op_lose = int(((y2real(y0 - 1800 * v0) - y2real(y0 + 1800 * v)) / FACTOR_DISTANCE) ** 2) * C
+
+    return -(lose - op_lose)
 
 
-def getMax(v0, y0, target_range = None, T_start = 2000, gamma = 0.99, T_end = 2, evaluate = op_player_f):
+def getMax(v0, y0, target_range=None, T_start=2000, gamma=0.99, T_end=2, evaluate=op_player_f):
     """
     求给定一元函数求v_range最大值。使用模拟退火算法
     :param target_range: 指向对面坐标可以取值的范围
@@ -76,7 +78,7 @@ def getMax(v0, y0, target_range = None, T_start = 2000, gamma = 0.99, T_end = 2,
             if y0 % 1800 >= 1200:
                 target_range = target_range[:-1]
     current_v = int(len(target_range) * np.random.random())
-    current_value = evaluate((target_range[current_v]-y0)//1800, v0, y0)
+    current_value = evaluate((target_range[current_v] - y0) // 1800, v0, y0)
     # value_matrix = evaluate(target_range, v0, y0)
     # 添加BSF，制胜法宝
     BSF = current_v, current_value
@@ -85,15 +87,15 @@ def getMax(v0, y0, target_range = None, T_start = 2000, gamma = 0.99, T_end = 2,
         # 获取下一个值：
         new_v = (int(T_start * (-0.5 + np.random.random())) + current_v) % len(target_range)
         # 获取新的估值
-        new_value = evaluate((target_range[current_v]-y0)//1800, v0, y0)
+        new_value = evaluate((target_range[current_v] - y0) // 1800, v0, y0)
         dE = new_value - current_value
         # 获取随机
         ran = np.random.random()
         # 判断是否满足跃迁条件
-        if dE > 0 or ran <= np.exp(-dE/T_start):
+        if dE > 0 or ran <= np.exp(-dE / T_start):
             current_v = new_v
             current_value = new_value
-            BSF = max(BSF, (current_v, current_value), key = lambda x:x[1])
+            BSF = max(BSF, (current_v, current_value), key=lambda x: x[1])
         # 降温
         T_start *= gamma
         # print(current_v, current_value, sep = ',')
@@ -101,7 +103,8 @@ def getMax(v0, y0, target_range = None, T_start = 2000, gamma = 0.99, T_end = 2,
     # print(v_best - v0, '*********************')
     return v_best, BSF[1]
 
-def pandas_max(v0, y0, target_range = None):
+
+def pandas_max(v0, y0, target_range=None):
     """
     pandas暴力求最值
     熊猫就是无敌
@@ -128,6 +131,7 @@ def pandas_max(v0, y0, target_range = None):
     max_v = values.argmax()
     return (max_v - y0) // 1800, values[max_v]
 
+
 # t1 = time.time()
 # print(pandas_max(40,10000))
 # t2 = time.time()
@@ -151,7 +155,7 @@ def play(tb: TableData, ds: dict) -> RacketAction:
     v0, y0 = tb.ball['velocity'].y, tb.ball['position'].y
     # 这里注释掉这句，是为了考虑是否取消启发式判断速度范围获取更大利益
     # v_best1 = pandas_max(v0, y0)[0]
-    v_best = max((pandas_max(v0,y0,Series1),pandas_max(v0,y0,Series2)),key = lambda x:x[1])[0]
+    v_best = max((pandas_max(v0, y0, Series1), pandas_max(v0, y0, Series2)), key=lambda x: x[1])[0]
     # 如果有道具，则对自己使用
     if tb.cards['cards']:
         side, item = 'SELF', tb.cards['cards'].pop(0)
@@ -160,12 +164,15 @@ def play(tb: TableData, ds: dict) -> RacketAction:
     # t2 = time.time()
     # print(t1,t2,t2-t1)
     return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y,
-                        int(v_best-tb.ball['velocity'].y),
-                        (500000 - tb.ball['position'].y)//2,
-                        side,item)
+                        int(v_best - tb.ball['velocity'].y),
+                        (500000 - tb.ball['position'].y) // 2,
+                        side, item)
 
-def summarize(tick:int, winner:str, reason:str, west:RacketData, east:RacketData, ball:BallData, ds:dict):
+
+def summarize(tick: int, winner: str, reason: str, west: RacketData, east: RacketData, ball: BallData, ds: dict):
     return
+
+
 #
 # import time
 # a = time.time()

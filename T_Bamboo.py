@@ -58,6 +58,7 @@ def op_player_f(v, v0, y0):
     return -(lose - op_lose)
 
 
+
 def ball_fly(v, y0):
     """
     一次球飞过去，算出球的落点和速度
@@ -176,8 +177,7 @@ def player_f(v, v0, y0):
     v_in, y2 = ball_fly(v, y0)
     # 对方打回的速度
     # TODO 用对方函数算一个最小值出来，修改op_player_f估值为负
-    vy = (1000600 - y2) / 1800
-    v_out = vy
+    # v_out = v_me
     # 打回的位置
     y3 = y2real(y2 + 1800 * v_out)
     # 己方决策函数

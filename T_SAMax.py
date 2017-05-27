@@ -33,18 +33,18 @@ def y2real(y):
     y_real = {0: remain, 1: Height - remain}[n_mirror % 2]
     return y_real
 
-#对手的估值函数
-def op_player_f(v,v0,y0):
+#估值函数
+def assume_f(v,v0,y0):
     """
-    对手估值函数
+    估值函数
     :param v: 打过去的速度
     :param v0: 接到时的速度
     :param y0: 接到的位置
     :return: 
     """
-    lose = int(((v - v0)/FACTOR_SPEED)**2)
-    op_lose = int(((y2real(y0 - 1800*v0) - C*y2real(y0 + 1800*v))/FACTOR_DISTANCE)**2)
-    return lose - op_lose
+    p_lose = int(((v - v0)/FACTOR_SPEED)**2)
+    op_lose = int(((y2real(y0 - 1800*v0) - C * y2real(y0 + 1800*v))/FACTOR_DISTANCE)**2)
+    return p_lose - op_lose
 
 
 def getMax(v0, y0, target_range = None, T_start = 1000, gamma = 0.99, T_end = 20, evaluate = op_player_f):

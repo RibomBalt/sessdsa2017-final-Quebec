@@ -55,6 +55,21 @@ def op_player_f(v, v0, y0):
 
     return -(lose - op_lose)
 
+def ball_fly(v, y0):
+    """
+    一次球飞过去，算出球的落点和速度
+    :param v: 球飞出的速度
+    :param y0: 球飞出的位置
+    :return: 速度，位置
+    """
+    # 对数字运算
+    y = y0 + 1800 * v
+    if y % (2 * Height) < Height:
+        y_real = y % Height
+    else:
+        y_real = Height - y % Height
+        v = -v
+    return y_real, v
 
 def getMax(v0, y0, target_range=None, T_start=2000, gamma=0.99, T_end=2, evaluate=op_player_f):
     """

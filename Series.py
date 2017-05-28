@@ -5,8 +5,10 @@ Height = 1000000
 C = 0.67
 Ct = 0.85
 STEP = 1800
+
+# TODO 道具部分代码笔记：
 # 1.获取时，路径上加一个数，使能获取道具的路径的估值更大
-# 2.根据路径判断是否使用变压器、瞬移、旋转球
+# 2.根据路径判断是否使用变压器、瞬移、旋转球，也即将道具对体力值的作用补充完整
 # 3.不考虑隐身术，但是注意不要出BUG，应对好None
 # 4.如果路径判断的道具没有使用，在RocketAction前加判断使用优先级最大的道具
 
@@ -23,6 +25,9 @@ def play(tb:TableData, ds) -> RacketAction:
     :param y1: Series，打到对手底线时球的y轴坐标
     :param v1: Series，打到对手底线时球的y轴速度
     :param op_chosen_v: Series，对手最终决定的回球方式
+    :param p_life1, op_life1: 决策前双方体力值
+    :param p_life2, op_life2: 决策后双方体力值
+    :param path_assume: Series，我方的估值函数值
     :return: RacketAction，我方最终决定的回球方式
     """
     # 创建ball_data元组
@@ -30,21 +35,35 @@ def play(tb:TableData, ds) -> RacketAction:
     # 创建player_data（迎球方）和op_player_data（跑位方）元组
     p_d = (tb.side["life"], tb.side['position'].y)
     op_d = (tb.op_side["life"], tb.op_side["active_card"])
+    # 创建card元组
+    cards = (tb.cards['card_tick'], tb.cards['cards'])
 
-    ##########然后下面只调用tb,ds,bd,pd,opd############
+    ######下面只调用tb,ds,bd,pd,opd######
 
     y0, v0 = b_d[1], b_d[3]
+    card = cards[1]
     p_life1, op_life1= p_d[0], op_d[0]
+    # 等距测试不同我方v的估值函数值
+    # 获得等距v的Series
     p_v = pd.Series([1000 * i for i in range(50)])
+
+    # y1为到达对方时球的y轴速度，op_chosen_v为对方回球的y轴速度
     y1, op_chosen_v = op_play(y0, p_v)
-    p_life2, p_active_card = p_life_assume(b_d, p_d, op_d, p_v, op_chosen_v, y1)
+
+    # 计算双方决策后的“体力值”（对于我方而言，不等同于体力值，因为加入了获得道具的“加分”）
+    p_life2, p_active_card = p_life_assume(b_d, p_d, op_d, cards, p_v, op_chosen_v, y1)
     op_life2 = op_life_assume(op_d, y0, op_chosen_v, y1, p_active_card)
+
+    # 选择我方估值函数值中的最大值对应的速度为最终决策速度
     path_assume = (p_life2 - p_life1) - (op_life2 - op_life1)
-    # op_chosen_v = op_v[op_assume.argmax()]
     p_chosen_v = p_v[path_assume.argmax()]
+
+    # TODO 这里需要判断是否已经准备使用道具，如果没有使用优先级最大的道具
+
+    # 返回具体打球方式
     return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, p_chosen_v - b_d, 0, None, None)
 
-def p_life_assume(b_d, p_d, op_d, p_v, op_chosen_v, y1):
+def p_life_assume(b_d, p_d, op_d, cards, p_v, op_chosen_v, y1):
     """
     根据我方此次决策，算出迎球+加速+跑位的总体力消耗(考虑道具)
     :param player_data: 决策前迎球方的信息
@@ -67,8 +86,12 @@ def p_life_assume(b_d, p_d, op_d, p_v, op_chosen_v, y1):
     y2, v2 = ball_fly_to(y1, op_chosen_v)
     middle = (y2 + p_d[1])//2
 
-    # 道具使用
-    ############！！！！补充道具使用！！！！############
+    # TODO 补充道具使用
+    v_will_hit = ball_fly_to_card(b_d, cards)# 此函数在本页最后
+    # TODO 这里要判断p_v中的一个是否在v_will_hit里面，并且赋值hit的道具是什么，但是我没看懂这个函数的返回值（叶勃写的）
+    # 然后对不同的道具给予不同的“加分”，以便估值函数能判断走这条能获得道具的路更有益
+    # 关于道具对体力值的影响在p_life_assume和op_life_assume里面，我担心逻辑会不完整，不过最担心的是Series的使用混乱
+
     p_active_card = None
     # 获取我方可能的决策结果
     player_action = RacketAction(b_d[4], b_d[1] - p_d[1], p_v - b_d[3], middle, None, p_active_card)
@@ -162,34 +185,10 @@ def op_life_assume(op_d, y0, op_chosen_v, y1, p_active_card):
     if op_player_action.card[1] == CARD_INCL:
         op_life += CARD_INCL_PARAM
     '''
-    # 按照跑位的距离减少体力值（听说对方不用道具）
+    # 按照跑位的距离减少体力值（听说对方不用道具，上方判断无用）
     op_life -= abs(run_distance) ** 2 // FACTOR_DISTANCE ** 2
     # 返回执行决策后op_life
     return op_life
-
-def ball_fly_to_card(bd, card):
-    """
-    根据道具出现的位置和击球时球所在的位置，计算出符合要求的竖直速度
-    :param bd: (tb.ball['position'].x,tb.ball['position'].y,tb.ball['velocity'].x,tb.ball['velocity'].y)
-    :param card: 决策前道具的信息
-    :param height: 球桌宽度，DIM[3] - DIM[2]
-    :return: 符合要求的竖直速度
-    """
-    y0, vx0 = bd[1], bd[2]
-    height = DIM[3] - DIM[2]
-    # 满足规则（碰撞1-2次）的速度区间[v3,v2]∪[v1,v0]
-    v0, v1, v2, v3 = ball_v_range(bd)
-    # 共有五个可能的镜像点/真实点
-    y = []
-    y[0] = card.pos[1]
-    y[1] = 2 * height + card.pos[1]
-    y[2] = 2 * height - card.pos[1]
-    y[3] = -card.pos[1]
-    y[4] = -2 * height + card.pos[1]
-    # 到达道具位置用时
-    card_step = card.pos[0] // vx0
-    # 合法的竖直速度
-    return filter(lambda v_y: (v_y >= v3 and v_y <= v2)or(v_y >= v1 and v_y <= v0),map(lambda x: (x - y0) // card_step, y))
 
 
 def op_play(y0, p_v):
@@ -228,7 +227,7 @@ def op_assume_f(v,v1:int,y1:int):
     :param y1: int，打到对手底线时球的y轴坐标
     :return: Series，估值函数值数组
     """
-    p_lose = int(((v - v1)/FACTOR_SPEED)**2) # TODO 这个int()可能是错误的！
+    p_lose = int(((v - v1)/FACTOR_SPEED)**2) # TODO 这个int()可能是错误的！应该改为floor()
     op_lose = int(((mirror2real(y1 - 1800 * v1)[0] - C * mirror2real(y1 + 1800 * v))[0] / FACTOR_DISTANCE)**2)
     return p_lose - op_lose
 
@@ -283,3 +282,28 @@ def ball_v_range(bd):
     if y0 == 0:
         v2 = -1
     return v0, v1, v2, v3
+
+def ball_fly_to_card(bd, card):
+    """
+    根据道具出现的位置和击球时球所在的位置，计算出符合要求的竖直速度
+    :param bd: (tb.ball['position'].x,tb.ball['position'].y,tb.ball['velocity'].x,tb.ball['velocity'].y)
+    :param card: 决策前道具的信息
+    :param height: 球桌宽度，DIM[3] - DIM[2]
+    :return: 符合要求的竖直速度
+    """
+    y0, vx0 = bd[1], bd[2]
+    height = DIM[3] - DIM[2]
+    # 满足规则（碰撞1-2次）的速度区间[v3,v2]∪[v1,v0]
+    v0, v1, v2, v3 = ball_v_range(bd)
+    # 共有五个可能的镜像点/真实点
+    y = []
+    y[0] = card.pos[1]
+    y[1] = 2 * height + card.pos[1]
+    y[2] = 2 * height - card.pos[1]
+    y[3] = -card.pos[1]
+    y[4] = -2 * height + card.pos[1]
+    # 到达道具位置用时
+    card_step = card.pos[0] // vx0
+    # 合法的竖直速度
+    return filter(lambda v_y: (v_y >= v3 and v_y <= v2)or(v_y >= v1 and v_y <= v0),map(lambda x: (x - y0) // card_step, y))
+    # TODO 这个cards原本是处理一个card的信息的，改为处理tb上所有存在的card可能有问题

@@ -94,7 +94,7 @@ def life_consume(pd, opd, tb, ds):
     p_life = pd[0]
     op_active_card = opd[1]
     # 减少体力值（考虑跑位方可能使用掉血包道具）
-    if opd.active_card == CARD_DECL:
+    if op_active_card == CARD_DECL:
         p_life -= CARD_DECL_PARAM
     # 获取我方此次决策结果
     player_action = pretend_play(tb, ds)

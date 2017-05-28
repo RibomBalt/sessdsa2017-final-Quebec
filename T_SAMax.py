@@ -34,7 +34,7 @@ def y2real(y):
     return y_real
 
 #估值函数
-def assume_f(v,v0,y0):
+def op_assume(v,v0,y0):
     """
     估值函数
     :param v: 打过去的速度

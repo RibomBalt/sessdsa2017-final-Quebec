@@ -8,14 +8,14 @@ import pandas as pd
 # ds为函数可以利用的存储字典
 # 函数需要返回球的y坐标，和y方向的速度
 def serve(ds:dict) -> tuple:
-    return BALL_POS[1], (1800000 - BALL_POS[1]) // 1800 + 1
+    return BALL_POS[1], - 500000// 1800 - 1
 
 # 打球函数
 # tb为TableData类型的对象
 # ds为函数可以利用的存储字典
 # 函数需要返回一个RacketAction对象
 Height = 1000000
-C = 0.67
+C = 0.69
 # 固定的V指向区间，默认以V=0时为取余数点。分为两个数组
 V_range1 = np.arange(-1999800, -1800, 3600)
 V_range2 = np.arange(1000800, 2998800, 3600)

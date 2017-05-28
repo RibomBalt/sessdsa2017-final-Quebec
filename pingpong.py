@@ -81,12 +81,13 @@ import os
 
 # 取得所有以T_开始文件名的算法文件名
 #players = [f[:-3] for f in os.listdir('.') if os.path.isfile(f) and f[-3:] == '.py' and f[:2] == 'T_']
-players = ['T_Sider','T_Siderplus']
+players = ['T_random','T_Siderplus']
 i = 0
 for west_name in players:
     for east_name in players:
-        print('----------------------''第', i, '局''-------------------------')
-        exec('import %s as WP' % (west_name,))
-        exec('import %s as EP' % (east_name,))
-        race(west_name, WP.serve, WP.play, WP.summarize, east_name, EP.serve, EP.play, EP.summarize)
-        i = i + 1
+        if not (west_name == 'T_random' and west_name == 'T_random'):
+            print('----------------------''第', i, '局''-------------------------')
+            exec('import %s as WP' % (west_name,))
+            exec('import %s as EP' % (east_name,))
+            race(west_name, WP.serve, WP.play, WP.summarize, east_name, EP.serve, EP.play, EP.summarize)
+            i = i + 1

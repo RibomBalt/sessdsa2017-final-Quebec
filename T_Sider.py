@@ -4,7 +4,7 @@ from test import *
 # 发球函数，总是做为West才发球
 # ds为函数可以利用的存储字典
 # 函数需要返回球的y坐标，和y方向的速度
-def serve(ds:dict) -> tuple:
+def serve(op_side: str, ds:dict) -> tuple:
     return BALL_POS[1], (1800000 - BALL_POS[1]) // 1800 + 1
 
 # 打球函数

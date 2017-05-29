@@ -195,4 +195,26 @@ def get_op_acc(bd:ball_data):
     # 暂时搁置
 '''
 
-
+def ball_fly_to_card(bd:ball_data, card):
+    """
+    根据道具出现的位置和击球时球所在的位置，计算出符合要求的竖直速度
+    :param ball_data: 决策前球的信息，包括位置和速度
+    :param card: 决策前道具的信息
+    :param height: 球桌宽度，DIM[3] - DIM[2]
+    :return: 符合要求的竖直速度
+    """
+    height = DIM[3] - DIM[2]
+    # 满足规则（碰撞1-2次）的速度区间[v3,v2]∪[v1,v0]
+    v0, v1, v2, v3 = ball_v_range(bd)
+    # 共有五个可能的镜像点/真实点
+    y = []
+    y[0] = card.pos[1]
+    y[1] = 2 * height + card.pos[1]
+    y[2] = 2 * height - card.pos[1]
+    y[3] = -card.pos[1]
+    y[4] = -2 * height + card.pos[1]
+    # 到达道具位置用时
+    card_step = card.pos[0] // bd.vel_x
+    # 合法的竖直速度
+    return filter(lambda v_y: (v_y >= v3 and v_y <= v2)or(v_y >= v1 and v_y <= v0),
+               map(lambda x: (x - bd.pos_y) // card_step, y))

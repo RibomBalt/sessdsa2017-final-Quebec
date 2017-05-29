@@ -2,6 +2,8 @@ import copy
 import random
 import math
 
+# 每次组合打多少局
+ROUND_NUMBER = 5
 # 桌面的坐标系，单位"pace"
 DIM = (-900000, 900000, 0, 1000000)
 # 最大时间，单位"tick"，每个回合3600tick，200回合
@@ -21,7 +23,7 @@ PL = {'West': 'W', 'East': 'E'}
 # 游戏结束原因代码
 RS = {'invalid_bounce': 'B', 'miss_ball': 'M', 'life_out': 'L', 'time_out': 'T'}
 # 道具出现频率每多少ticks出现一个道具
-CARD_FREQ = 4000
+CARD_FREQ = int(3600 * 2.5)
 # 道具出现的空间范围
 CARD_EXTENT = (-800000, 800000, 100000, 900000)
 # 道具箱的最大容量
@@ -230,7 +232,7 @@ class Ball:  # 球
 
 
 class RacketAction:  # 球拍动作
-    def __init__(self, tick, bat_vector, acc_vector, run_vector, side, card):
+    def __init__(self, tick, bat_vector, acc_vector, run_vector, side: str, card: Card):
         # self.t0 = tick  # tick时刻的动作，都是一维矢量，仅在y轴方向
         self.bat = bat_vector  # t0~t1迎球的动作矢量（移动方向及距离）
         self.acc = acc_vector  # t1触球加速矢量（加速的方向及速度）
@@ -248,7 +250,7 @@ class Racket:  # 球拍
     def __init__(self, side, pos):  # 选边'West'／'East'和位置
         self.side, self.pos = side, pos
         self.life = RACKET_LIFE
-        self.bat_lf = self.run_lf = self.acc_lf = self.card_lf = 0  #各种操作对生命值的损耗
+        self.bat_lf = self.run_lf = self.acc_lf = self.card_lf = 0  # 各种操作对生命值的损耗
         self.name = self.serve = self.play = self.summarize = None
         self.action = self.datastore = None
         self.card_box = CardBox()  # 道具箱，本方拥有的道具，不超过MAX_CARDS个，超过的话按照队列形式删除旧的道具。
@@ -330,9 +332,9 @@ class BallData:  # 球的信息，记录日志用
 
 class CardData:  # 道具信息，记录日志用
     def __init__(self, card_tick, cards, active_card):
-        self.card_tick = card_tick
+        self.card_tick = card_tick  # 道具出现时间的计时，0-CARD_FREQ
         self.cards = copy.copy(cards)  # 道具对象的列表，数量上限为MAX_TABLE_CARDS
-        self.active_card = active_card # (<被用道具方West/East>, <道具代码>)
+        self.active_card = active_card  # (<被用道具方SELF/OPNT>, <Card>)
 
 
 class Table:  # 球桌
@@ -378,7 +380,8 @@ class Table:  # 球桌
     def serve(self):  # 发球，始终是West发球
         self.tick = 0  # 当前的时刻tick
         player = self.players[self.side]  # 现在side是West
-        pos_y, velocity_y = player.serve(player.datastore)  # 只提供y方向的位置和速度
+        pos_y, velocity_y = player.serve(self.players[self.op_side].name,
+                                         player.datastore)  # 只提供y方向的位置和速度
         self.ball = Ball(DIM, Position(BALL_POS[0], pos_y),
                          Vector(BALL_V[0], velocity_y))  # 球的初始化
         self.change_side()  # 换边迎球
@@ -428,7 +431,7 @@ class Table:  # 球桌
             'cards': copy.copy(player.card_box)}
         dict_op_side = {
             'name': op_player.name,
-            'position': None if self.active_card[1] == CARD_DSPR else copy.copy(op_player.pos),
+            'position': copy.copy(op_player.pos),
             'life': op_player.life,
             'cards': copy.copy(op_player.card_box),
             'active_card': self.active_card,
@@ -444,8 +447,8 @@ class Table:  # 球桌
             'cards': copy.copy(self.cards)}
         # 调用，返回迎球方的动作
         player_action = player.play(TableData(self.tick, self.tick_step,
-                                              dict_side, dict_op_side, dict_ball, dict_card),
-                                    player.datastore)
+                                              dict_side, dict_op_side,
+                                              dict_ball, dict_card),player.datastore)
         # 设置迎球方的动作，迎球方使用的道具生效要到下一趟
         # 将迎球方动作中的距离速度等值规整化为整数
         player_action.normalize()
@@ -505,8 +508,8 @@ class Table:  # 球桌
 
 class LogEntry:
     def __init__(self, tick, side, op_side, ball, card):
-        self.tick = tick
-        self.side = side
-        self.op_side = op_side
-        self.ball = ball
-        self.card = card
+        self.tick = tick  # 当前的时间
+        self.side = side  # RacketData类对象
+        self.op_side = op_side  # RacketData类对象
+        self.ball = ball  # BallData类对象
+        self.card = card  # CardData类对象

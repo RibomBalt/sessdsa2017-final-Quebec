@@ -59,8 +59,8 @@ def play(tb:TableData, ds) -> RacketAction:
     # 返回具体打球方式
     p_chosen_v = p_v[index]
     p_chosen_side = p_card_side[index]
-    p_achosen_card = p_active_card[index]
-    return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, p_chosen_v - v0, 0, p_chosen_side, p_achosen_card)
+    p_chosen_card = p_active_card[index]
+    return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, p_chosen_v - v0, 0, p_chosen_side, p_chosen_card)
 
 def p_life_consume(b_d, p_d, op_d, cards_available:list, p_v:pd.Series, op_chosen_v:pd.Series, y1:pd.Series):
     """

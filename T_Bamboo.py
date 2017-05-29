@@ -7,11 +7,13 @@ import pandas as pd
 Height = 1000000
 C = 0.67
 # 固定的V指向区间，默认以V=0时为取余数点。分为两个数组
-V_range1 = np.arange(-1999800, -1800, 1800)
-V_range2 = np.arange(1000800, 2998800, 1800)
+V_range1 = np.arange(-1999800, -1800, 3600)
+V_range2 = np.arange(1000800, 2998800, 3600)
 # Series共用，V_range to Series
 Series1 = pd.Series(V_range1, index=V_range1)
 Series2 = pd.Series(V_range2, index=V_range2)
+
+series = pd.concat([Series1, Series2])
 
 Random = [np.random.random() for i in range(1000000)]
 # 球的
@@ -55,6 +57,7 @@ def op_player_f(v, v0, y0):
 
     return -(lose - op_lose)
 
+
 def ball_fly(v, y0):
     """
     一次球飞过去，算出球的落点和速度
@@ -74,7 +77,8 @@ def ball_fly(v, y0):
     else:
         y_real = Height - y % Height
         v = -v
-    return y_real, v
+    return v, y_real
+
 
 def getMax(v0, y0, target_range=None, T_start=2000, gamma=0.99, T_end=2, evaluate=op_player_f):
     """
@@ -124,14 +128,14 @@ def getMax(v0, y0, target_range=None, T_start=2000, gamma=0.99, T_end=2, evaluat
     return v_best, BSF[1]
 
 
-def pandas_max(v0, y0, target_range=None):
+def pandas_max(v0, y0, target_range=None, evaluate=op_player_f):
     """
     pandas暴力求最值
     熊猫就是无敌
     :param v0: 
     :param y0: 
     :param target_range: 
-    :return: 
+    :return: 对方返回的速度、相应估值
     """
     if target_range is None:
         # 获取符合这个y0的v范围
@@ -144,9 +148,10 @@ def pandas_max(v0, y0, target_range=None):
                 target_range = target_range[:-1]
         # 索引也同步增加
         target_range.index += y0 % 1800
-
-    # print(np.nan in target_range)
-    f = lambda v: op_player_f(v, v0, y0)
+    if evaluate is op_player_f:
+        f = lambda v: evaluate(v, v0, y0)
+    else:
+        f = evaluate
     values = target_range.apply(f)
     max_v = values.argmax()
     return (max_v - y0) // 1800, values[max_v]
@@ -157,6 +162,33 @@ def pandas_max(v0, y0, target_range=None):
 # t2 = time.time()
 # print(t1,t2,t2-t1)
 
+def player_f(v, v0, y0):
+    """
+    我方估值函数。算两层
+    :param v: 
+    :param v0: 
+    :param y0: 
+    :return: 
+    """
+    # 对方发球位置
+    y1 = y2real(y0 - 1800 * v0)
+    # 我们打到的位置
+    v_in, y2 = ball_fly(v, y0)
+    # 对方打回的速度
+    # TODO 用对方函数算一个最小值出来，修改op_player_f估值为负
+    if v0 < 0:
+        vy = -1 - y0 / 1800 + v0
+    else:
+        vy = 557 - y0 / 1800 + v0
+    v_out = vy
+    # 打回的位置
+    y3 = y2real(y2 + 1800 * v_out)
+    # 己方决策函数
+    # 知道自己的跑位，因此这一项赋给0.5
+    lose = ((v - v0) / FACTOR_SPEED) ** 2 + 0.5 * ((y0 - y3) / FACTOR_DISTANCE) ** 2  # 己方损失
+    op_lose = ((v_out - v_in) / FACTOR_SPEED) ** 2 + C * ((y1 - y2) / FACTOR_DISTANCE) ** 2  # 对方损失
+    # 返回对方减少 - 我方减少。这个尽可能大
+    return v, op_lose - lose, y3
 
 
 def serve(ds):
@@ -172,20 +204,31 @@ def play(tb: TableData, ds: dict) -> RacketAction:
     """
     # return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, 0, 0)
     # t1 = time.time()
+    # print(t1)
     v0, y0 = tb.ball['velocity'].y, tb.ball['position'].y
-    # 这里注释掉这句，是为了考虑是否取消启发式判断速度范围获取更大利益
-    # v_best1 = pandas_max(v0, y0)[0]
-    v_best = max((pandas_max(v0, y0, Series1), pandas_max(v0, y0, Series2)), key=lambda x: x[1])[0]
+    # # 这里注释掉这句，是为了考虑是否取消启发式判断速度范围获取更大利益
+    # # v_best1 = pandas_max(v0, y0)[0]
+    #
+    # v_best = max((pandas_max(v0, y0, Series1), pandas_max(v0, y0, Series2)), key=lambda x: x[1])[0]
+    v_best = max((pandas_max(v0, y0, Series1, lambda v: player_f(v, v0, y0)[1]),
+                  pandas_max(v0, y0, Series2, lambda v: player_f(v, v0, y0)[1])), key=lambda x: x[1])[0]
+    y2reach = player_f(v_best, v0, y0)[2]
     # 如果有道具，则对自己使用
     if tb.cards['cards']:
         side, item = 'SELF', tb.cards['cards'].pop(0)
     else:
         side, item = None, None
     # t2 = time.time()
-    # print(t1,t2,t2-t1)
+    # print(t1, t2, t2 - t1)
+
+    # if v0 < 0:
+    #     vy = -1 - y0 // 1800
+    # else:
+    #     vy = 557 - y0 //1
+
     return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y,
                         int(v_best - tb.ball['velocity'].y),
-                        (500000 - tb.ball['position'].y) // 2,
+                        (y2reach - tb.ball['position'].y) // 2,
                         side, item)
 
 
@@ -203,7 +246,7 @@ def summarize(tick: int, winner: str, reason: str, west: RacketData, east: Racke
 
 def evaluate(bd, pd, opd):
     """
-    
+
     :param bd: 
     :param pd: 
     :param opd: 

@@ -19,11 +19,11 @@ STEP = 1800
 def play(tb:TableData, ds) -> RacketAction:
     """
     主程序play，反复调用
-    :param y0: int，我方出射点坐标
-    :param v0: int，我方出射点坐标
+    :param y0: int，对方出射点坐标
+    :param v0: int，对方出射点坐标
     :param p_v: Series，我方可能的出射速度
-    :param y1: Series，打到对手底线时球的y轴坐标
-    :param v1: Series，打到对手底线时球的y轴速度
+    :param y1: Series，打到我方底线时球的y轴坐标
+    :param v1: Series，打到我方底线时球的y轴速度
     :param op_chosen_v: Series，对手最终决定的回球方式
     :param p_life1, op_life1: 决策前双方体力值
     :param p_life2, op_life2: 决策后双方体力值

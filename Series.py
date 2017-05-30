@@ -269,7 +269,7 @@ def mirror2real(Y:pd.Series):
     :return: 真实点y坐标数组（范围0-1,000,000），碰撞次数数组
     """
     if type(Y) is pd.Series:
-        y_real = pd.Series.where( Y % (2 * Height) < Height, Y % Height, 2 * Height - Y % Height)
+        y_real = pd.Series.where( Y % (2 * Height) < Height, Y % Height, Height - Y % Height)
         if Y % Height != 0:  # 若球没有打在边界上
             count = Y // Height
         else:  # 若恰好在边界上
@@ -293,8 +293,15 @@ def ball_v_range(b_d):
     :param bd: (tb.ball['position'].x,tb.ball['position'].y,tb.ball['velocity'].x,tb.ball['velocity'].y)
     :param tb.step: 1800 tick
     :param Y: 镜像点y坐标
-    :return: 与桌碰撞次数  
+    :return: 与桌碰撞次数
+    >>> ball_v_range((0,0,0,0))
+    (1666, 556, -1, -1111)
+    >>> ball_v_range((0,1000000,0,0))
+    (1111, 1, -556, -1666)
+    >>> ball_v_range((0,500000,0,0))
+    (1388, 278, -278, -1388)
     """
+    # 已完成测试
     y0 = b_d[1]
     # v0,v1,v2,v3是速度的范围边界:可取[v3,v2]∪[v1,v0]
     v0 = (3 * Height - y0) // STEP
@@ -305,3 +312,7 @@ def ball_v_range(b_d):
     if y0 == 0:
         v2 = -1
     return v0, v1, v2, v3
+
+if __name__=='__main__':
+    import doctest
+    doctest.testmod(verbose=False)

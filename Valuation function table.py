@@ -53,12 +53,14 @@ def traversal():
             print(vo, y0,v_me,v_range)
             writer.writerows(data)
     csvfile.close()
-
+    '''
+    # 在pycharm上面输出结果
     csvfile = open('max.csv', 'r')
     reader = csv.reader(csvfile)
     for row in reader:
         print(row)
     csvfile.close()
+    '''
 
 def f(v):
     y = op_player_f(v, 500, 900000)

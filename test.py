@@ -105,26 +105,6 @@ def mirror2real(y_axis:int):
     # n_mirror是穿过墙的数目，可正可负
     return {0:remain, 1:DIM[3] - remain}[n_mirror % 2], n_mirror
 
-def ball_v_range(bd:ball_data):
-    """
-    根据我方出射点坐标，算出y轴可取速度的边界值
-    :param tb.step: 1800 tick
-    :param Y: 镜像点y坐标
-    :param height: 乒乓球桌的宽度, DIM[3] - DIM[2]
-    :return: 与桌碰撞次数
-    """
-    height = DIM[3] - DIM[2]
-    # v0,v1,v2,v3是速度的范围边界:可取[v3,v2]∪[v1,v0]
-    v0 = (3 * height - bd.pos_y) // STEP
-    v1 = (1 * height - bd.pos_y) // STEP + 1
-    v2 = (0 - bd.pos_y) // STEP
-    v3 = (-2 * height - bd.pos_y) // STEP + 1
-    # 贴边打的情况算作反弹零次，需要排除
-    if bd.pos_y == 0:
-        v2 = -1
-    return v0, v1, v2, v3
-
-
 def side_life_consume(pd:player_data, opd:op_player_data, tb:TableData, ds):
     """
     根据我方此次决策，算出迎球+加速+跑位的总体力消耗(考虑道具)
@@ -194,19 +174,44 @@ def get_op_acc(bd:ball_data):
     # 此次111本应该为我方上一次打球至对方处，球y轴的速度。此数据应当从pingpong.py里29行左右（记录日志项）log中获取。
     # 暂时搁置
 '''
-
-def ball_fly_to_card(bd:ball_data, card):
+# 5.29修改，一共改动了三个函数
+def ball_v_range(b_d:tuple) -> tuple:
     """
-    根据道具出现的位置和击球时球所在的位置，计算出符合要求的竖直速度
-    :param ball_data: 决策前球的信息，包括位置和速度
-    :param card: 决策前道具的信息
-    :param height: 球桌宽度，DIM[3] - DIM[2]
-    :return: 符合要求的竖直速度
+    根据我方出射点坐标，算出y轴可取速度的边界值
+    :param STEP: 1800 tick
+    :param b_d[2]: b_d[2] = tb.ball['position'].y,接球时球的纵坐标
+    :param height: 乒乓球桌的宽度, DIM[3] - DIM[2]
+    :return: 可取速度的边界
     """
     height = DIM[3] - DIM[2]
+    # v0,v1,v2,v3是速度的范围边界:可取[v3,v2]∪[v1,v0]
+    v0 = (3 * height - b_d[2]) // STEP
+    v1 = (1 * height - b_d[2]) // STEP + 1
+    v2 = (0 - b_d[2]) // STEP
+    v3 = (-2 * height - b_d[2]) // STEP + 1
+    # 贴边打的情况算作反弹零次，需要排除
+    if v2 == 0:
+        v2 = -1
+    # 返回一个元组，依次为速度的四个边界值
+    return v0, v1, v2, v3
+
+def fly_assistant(b_d:tuple, v_range:tuple, card:Card) -> list:
+    """
+    根据某个确定的道具位置和球所在的位置，计算吃到它所需要的竖直速度
+    :param b_d: b_d = (tb.ball['position'].x,tb.ball['position'].y,tb.ball['velocity'].x,tb.ball['velocity'].y,tb.tick)
+    :param v_range: 满足规则（碰撞1-2次）的速度区间[v3,v2]∪[v1,v0]
+    :param card: 是一个Card类
+    :param height: 球桌宽度，DIM[3] - DIM[2]
+    :param x0: x0 = b_d[0]，接球时球的横坐标
+    :param y0: y0 = b_d[1]，接球时球的纵坐标
+    :param vx0: vx0 = b_d[2]，球的水平速度
+    :return: 返回一个list，元素为符合击中某道具要求的竖直速度
+    """
+    height = DIM[3] - DIM[2]
+    x0, y0, vx0 = b_d[0], b_d[1], b_d[2]
     # 满足规则（碰撞1-2次）的速度区间[v3,v2]∪[v1,v0]
-    v0, v1, v2, v3 = ball_v_range(bd)
-    # 共有五个可能的镜像点/真实点
+    v0, v1, v2, v3 = v_range
+    # 要吃的道具共有五个可能的镜像点/真实点，置于列表y中
     y = []
     y[0] = card.pos[1]
     y[1] = 2 * height + card.pos[1]
@@ -214,7 +219,29 @@ def ball_fly_to_card(bd:ball_data, card):
     y[3] = -card.pos[1]
     y[4] = -2 * height + card.pos[1]
     # 到达道具位置用时
-    card_step = card.pos[0] // bd.vel_x
-    # 合法的竖直速度
-    return filter(lambda v_y: (v_y >= v3 and v_y <= v2)or(v_y >= v1 and v_y <= v0),
-               map(lambda x: (x - bd.pos_y) // card_step, y))
+    card_step = abs(x0 - card.pos[0]) // vx0
+    # 在能到达道具的一系列速度中挑选出属于区间v_range的，保存到列表中并返回
+    # 列表中的元素类型是int
+    return [vy for vy in
+        filter(lambda v: (v >= v3 and v <= v2)or(v >= v1 and v <= v0),
+               map(lambda x: (x - y0) // card_step, y))]
+
+def ball_fly_to_card(b_d:tuple, cards_al:list) -> list:
+    """
+    cards_al means cards_available
+    根据桌面上现有的道具种类、位置和球所在的位置，计算吃到对应的各个道具所需要的竖直速度
+    :param b_d: b_d = (tb.ball['position'].x,tb.ball['position'].y,tb.ball['velocity'].x,tb.ball['velocity'].y,tb.tick)
+    :param cards_al: list，决策前桌面上道具的信息，元素是Card类
+    :param height: 球桌宽度，DIM[3] - DIM[2]
+    :param v_range: 满足规则（碰撞1-2次）的速度区间[v3,v2]∪[v1,v0]
+    :return: 返回一个list，其元素为符合击中某道具要求的竖直速度群，vy_list的元素和cards_al的元素是对应关系
+    """
+    v_range = ball_v_range(b_d)
+    # 吃到序号为i的道具需要的速度（所有可能的速度）保存在v[i]中
+    vy_list = []
+    for i in range(len(cards_al)):
+        vy_list[i] = fly_assistant(b_d, v_range, cards_al[i])
+    # 返回吃到所有道具所需要的竖直速度，通过对应索引查找
+    return vy_list
+
+

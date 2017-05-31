@@ -289,6 +289,8 @@ def ball_fly_to(y0: int, p_v_i: int) -> tuple:
     :param Y: Series，镜像点y坐标
     :param count: 与桌碰撞次数，可正可负
     :return: 到达对侧位置位置、速度
+    >>> print(ball_fly_to(50000, 80))
+    (194000, 80)
     """
     # Y 为没有墙壁时乒乓球到达的位置（镜像点）
     Y = y0 + p_v_i * STEP
@@ -296,7 +298,7 @@ def ball_fly_to(y0: int, p_v_i: int) -> tuple:
     y1 = mirror2real(Y)[0]
     # 计算并更新y轴速度
     count = mirror2real(Y)[1]
-    v1 = p_v_i * ((count + 1) % 2 * 2 - 1)
+    v1 = p_v_i * ((count + 1) % 2 * 2 - 1) # 后面这一项，当count为偶数时为1，奇数时为-1
     return y1, v1
 
 

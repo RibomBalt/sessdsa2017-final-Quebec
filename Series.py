@@ -290,7 +290,7 @@ def ball_fly_to_card(b_d:tuple, cards_al:list):
 def ball_v_range(b_d):
     """
     根据我方出射点坐标，算出y轴可取速度的边界值
-    :param bd: (tb.ball['position'].x,tb.ball['position'].y,tb.ball['velocity'].x,tb.ball['velocity'].y)
+    :param b_d: (tb.ball['position'].x,tb.ball['position'].y,tb.ball['velocity'].x,tb.ball['velocity'].y)
     :param tb.step: 1800 tick
     :param Y: 镜像点y坐标
     :return: 与桌碰撞次数  
@@ -301,7 +301,9 @@ def ball_v_range(b_d):
     v1 = (1 * Height - y0) // STEP + 1
     v2 = (0 - y0) // STEP
     v3 = (-2 * Height - y0) // STEP + 1
-    # 贴边打的情况算作反弹零次，需要排除
+    # 贴边打的情况算作反弹零次，需要排除。包括上边和下边
     if y0 == 0:
         v2 = -1
+    elif y0 == Height:
+        v1 = 1
     return v0, v1, v2, v3

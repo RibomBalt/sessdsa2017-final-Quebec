@@ -343,10 +343,12 @@ def ball_fly_to_card(b_d: tuple, cards_al: list) -> list:
     :param height: 球桌宽度，DIM[3] - DIM[2]
     :param v_range: 满足规则（碰撞1-2次）的速度区间[v3,v2]∪[v1,v0]
     :return: 返回一个list，其元素为list，即为符合击中某道具要求的竖直速度群，vy_list的元素和cards_al的元素是对应关系
+    >>> ball_fly_to_card((-900000, 80000, 1000, 50), [Card('SP', 0.5, Vector(200,10000))])
+    [[-78, -100]]
     """
     v_range = ball_v_range(b_d)
     # 吃到序号为i的道具需要的速度（所有可能的速度）保存在v[i]中
-    vy_list = []
+    vy_list = [0] * len(cards_al)
     for i in range(len(cards_al)):
         vy_list[i] = fly_assistant(b_d, v_range, cards_al[i])
     # 返回吃到所有道具所需要的竖直速度，通过对应索引查找

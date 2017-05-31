@@ -109,7 +109,7 @@ def p_life_consume(b_d, p_d, op_d, cards_available:list, p_v:pd.Series, op_chose
     for card in v_will_hit:
         for vel in card:
     # TODO !!!
-
+            pass
     '''
     以下是具体决策结果实现部分
     只考虑变压器、旋转球、瞬移术的使用，优先使用旋转球变压器，属于进攻性策略。
@@ -290,22 +290,38 @@ def ball_fly_to(y0:int, p_v_i:int) -> tuple:
     v1 = p_v_i * ((count + 1) % 2 * 2 - 1)
     return y1, v1
 
-def mirror2real(y_mr:int)-> tuple:
+def mirror2real(y_mr:int or np.array or pd.Series)-> tuple:
     """
-    将镜像点映射为真实点
+    将镜像点映射为真实点.
+    可以代入int,np.array,pd.Series等多种类型
     :param y_mr: 镜像点y坐标
     :return: 真实点y坐标数组（范围0-1,000,000），碰撞次数数组
     """
-    if y_mr % (2 * Height) < Height:
-        y_real = y_mr % Height
-    else:
-        y_real = Height - y_mr % Height
-    # 若球没有打在边界上
-    if y_mr % Height != 0:
-        count = y_mr // Height
-    else:
-        count = (y_mr // Height if (y_mr > 0) else (1 - y_mr // Height))
-    return y_real, count
+    if type(y_mr) is int:
+        if y_mr % (2 * Height) < Height:
+            y_real = y_mr % Height
+        else:
+            y_real = Height - y_mr % Height
+        # 若球没有打在边界上
+        if y_mr % Height != 0:
+            count = y_mr // Height
+        else:
+            count = (y_mr // Height if (y_mr > 0) else (1 - y_mr // Height))
+        return y_real, count
+    elif type(y_mr) is np.array:
+        # 以上代码用np.array改写形式
+        y_real = np.where(y_mr % (2 * Height) < Height, y_mr % Height, Height - y_mr % Height)
+        count = np.where(y_mr % Height != 0, y_mr // Height,
+                         np.where(y_mr > 0, y_mr // Height, 1 - y_mr // Height))
+        return y_real, count
+    elif type(y_mr) is pd.Series:
+        # 以上代码用pd.Series改写形式
+        y_mr = y_mr.values
+        # 复制ndarray
+        y_real = np.where(y_mr % (2 * Height) < Height, y_mr % Height, Height - y_mr % Height)
+        count = np.where(y_mr % Height != 0, y_mr // Height,
+                         np.where(y_mr > 0, y_mr // Height, 1 - y_mr // Height))
+        return pd.Series(y_real), pd.Series(count)
 
 
 def ball_fly_to_card(b_d:tuple, cards_al:list) -> list:
@@ -381,13 +397,21 @@ def sec_kill(p_v:pd.Series, y0:int) -> pd.Series:
     :param p_v:pd.Series，出射点坐标速度
     :param y0:int，出射点坐标坐标
     :return: pd.Series  元素为bool类型
+    >>> a = sec_kill(pd.Series(range(-1000, 400)), 10)
+    >>> print(a[a].count(), a.count())
+    842 1400
     """
-    # 镜像点坐标
+    # 镜像点坐标。Y:pd.Series
     Y = y0 + STEP * p_v
     # 把镜像点Y转化为真实点，然后求合法速度区间
     y, count = mirror2real(Y)
     v_range = ball_v_range(y)
-    # 对方接球时的竖直速度
-    op_v = p_v if (count % 2 == 0) else (- p_v)
+    # 对方接球时的竖直速度函数
+    # 这句写给金老师：pd.Series直接不能用where，但是pd.Series.values返回值的np.array，可以用np.where。彻底解决。
+    # 另外pd.Series基于np.array实现，两种类型几乎是秒转换，不必担心效率。
+
+    # op_v = p_v if (count % 2 == 0) else (- p_v)
+    op_v = pd.Series(np.where(count.values % 2 == 0, p_v, -p_v))
     # 返回True or False，True表示会被秒杀，False表示不会
-    return not((op_v >= v_range[3] and op_v <= v_range[2]) or (op_v >= v_range[1] and op_v <= v_range[0]))
+    # 经测试，逻辑连接符可以用&|-表示与或非，但是似乎不可以用and,or,not。注意优先级不同，必须加括号
+    return -(((op_v >= v_range[3]) & (op_v <= v_range[2])) | ((op_v >= v_range[1]) & (op_v <= v_range[0])))

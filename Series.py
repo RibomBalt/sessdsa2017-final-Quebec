@@ -1,10 +1,12 @@
 from table import *
 import pandas as pd
 import numpy as np
+
 Height = 1000000
 C = 0.67
 Ct = 0.85
 STEP = 1800
+
 
 # 道具部分代码笔记：
 # 1.获取时，路径上加一个数，使能获取道具的路径的估值更大
@@ -12,7 +14,7 @@ STEP = 1800
 # 3.不考虑隐身术，但是注意不要出BUG，应对好None
 # 4.如果路径判断的道具没有使用，在RocketAction前加判断使用优先级最大的道具
 
-def play(tb:TableData, ds) -> RacketAction:
+def play(tb: TableData, ds) -> RacketAction:
     """
     主程序play，反复调用
     :param y0: int，打到我方底线时球的y轴坐标
@@ -27,18 +29,18 @@ def play(tb:TableData, ds) -> RacketAction:
     :return: RacketAction，我方最终决定的回球方式
     """
     # 创建ball_data元组
-    b_d = (tb.ball['position'].x,tb.ball['position'].y,tb.ball['velocity'].x,tb.ball['velocity'].y,tb.tick)
+    b_d = (tb.ball['position'].x, tb.ball['position'].y, tb.ball['velocity'].x, tb.ball['velocity'].y, tb.tick)
     # 创建player_data（迎球方）和op_player_data（跑位方）元组
     p_d = (tb.side["life"], tb.side['position'].y, tb.side['cards'])
     op_d = (tb.op_side["life"], tb.op_side["active_card"], tb.op_side['position'].y)
     # 创建cards元组
     cards = (tb.cards['card_tick'], tb.cards['cards'])
-#——————————————————————————————————————————————————————————————————————————————#
+    # ——————————————————————————————————————————————————————————————————————————————#
     y0, v0 = b_d[1], b_d[3]
     # cards_available:桌面上现有的道具列表
     cards_available = cards[1]
     # 对方上一轮迎球加速跑位加减血道具生效而我方尚未作出迎球反应时双方体力值
-    p_life1, op_life1= p_d[0], op_d[0]
+    p_life1, op_life1 = p_d[0], op_d[0]
     # 我方拥有的道具list,为CardBox类
     p_cards = p_d[2]
 
@@ -71,21 +73,24 @@ def play(tb:TableData, ds) -> RacketAction:
     p_chosen_side = p_card_side[index]
     p_chosen_card = p_active_card[index]
     # 如果没有使用道具而恰好有加减血包，现在是优先使用减血包，属于攻击性策略。
-    if p_chosen_side==None and p_chosen_card==None:
+    if p_chosen_side == None and p_chosen_card == None:
         if CARD_DECL in p_cards:
             p_chosen_side = 'OPNT'
             p_chosen_card = CARD_DECL
         elif CARD_INCL in p_cards:
             p_chosen_side = 'SELF'
             p_chosen_card = CARD_INCL
-        else:# 扔掉隐身术
+        else:  # 扔掉隐身术
             if CARD_DSPR in p_cards:
                 p_chosen_side = 'SELF'
                 p_chosen_card = CARD_DSPR
 
-    return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, p_chosen_v - v0, 0, p_chosen_side, p_chosen_card)
+    return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, p_chosen_v - v0, 0, p_chosen_side,
+                        p_chosen_card)
 
-def p_life_consume(b_d, p_d, op_d, cards_available:list, p_v:pd.Series, op_chosen_v:pd.Series, y1:pd.Series, v1:pd.Series):
+
+def p_life_consume(b_d, p_d, op_d, cards_available: list, p_v: pd.Series, op_chosen_v: pd.Series, y1: pd.Series,
+                   v1: pd.Series):
     """
     根据我方此次决策，算出迎球+加速+跑位的总体力消耗(考虑道具)
     :param p_d: 决策前迎球方的信息
@@ -108,7 +113,7 @@ def p_life_consume(b_d, p_d, op_d, cards_available:list, p_v:pd.Series, op_chose
     # 显然加血包减血包就应该是CARD_INCL_PARAM = 2000 CARD_DECL_PARAM = 2000，其他加分按照（可能的受益*下一轮使用概率）来计算
     for card in v_will_hit:
         for vel in card:
-    # TODO !!!
+            # TODO !!!
             pass
     '''
     以下是具体决策结果实现部分
@@ -131,12 +136,12 @@ def p_life_consume(b_d, p_d, op_d, cards_available:list, p_v:pd.Series, op_chose
             p_card_side = 'OPNT'
     # 变压器的使用（对方总移动超过一半）
     if CARD_AMPL in p_cards:
-        if abs(y1 - op_ini_pos) > Height * 0.5 :
+        if abs(y1 - op_ini_pos) > Height * 0.5:
             p_active_card = CARD_AMPL
             p_card_side = 'OPNT'
     # 瞬移术的使用（跑位超过一半）
     if CARD_TLPT in p_cards:
-        if  abs(middle - y0) > Height * 0.5 :
+        if abs(middle - y0) > Height * 0.5:
             p_active_card = CARD_TLPT
             p_card_side = 'SELF'
 
@@ -157,7 +162,8 @@ def p_life_consume(b_d, p_d, op_d, cards_available:list, p_v:pd.Series, op_chose
     # 按照迎球的距离减少体力值（考虑对方之前可能使用变压器道具）
     p_life -= (abs(bat_distance) ** 2 // FACTOR_DISTANCE ** 2) * (CARD_AMPL_PARAM if op_active_card == CARD_AMPL else 1)
     # 按照给球加速度的指标减少体力值（考虑对方之前可能使用变压器道具）
-    p_life -= (abs(player_action.acc) ** 2 // FACTOR_SPEED ** 2) * (CARD_AMPL_PARAM if op_active_card == CARD_AMPL else 1)
+    p_life -= (abs(player_action.acc) ** 2 // FACTOR_SPEED ** 2) * (
+    CARD_AMPL_PARAM if op_active_card == CARD_AMPL else 1)
 
     # 如果指定跑位的距离大于最大速度的距离，则采用最大速度距离
     run_distance = sign(player_action.run) * min(abs(player_action.run), velocity * STEP)
@@ -175,6 +181,7 @@ def p_life_consume(b_d, p_d, op_d, cards_available:list, p_v:pd.Series, op_chose
 
     # 返回执行决策后p_life,p_card_side和p_active_card
     return p_life, p_card_side, p_active_card
+
 
 def op_life_consume(op_d, y0, op_chosen_v, y1, p_active_card):
     """
@@ -201,7 +208,7 @@ def op_life_consume(op_d, y0, op_chosen_v, y1, p_active_card):
     # 对方跑位到我方落点与当下位置中某一点
     middle = Ct * (y2 - op_y) + op_y
     # 获取对方的决策结果
-    op_player_action = RacketAction(7200, Ct * (y2 - y0) + y0 , op_vy - v2, middle, None, None)# 下文中tick没用，随便取一个合法值
+    op_player_action = RacketAction(7200, Ct * (y2 - y0) + y0, op_vy - v2, middle, None, None)  # 下文中tick没用，随便取一个合法值
     # 将迎球方动作中的距离速度等值规整化为整数
     op_player_action.normalize()
     # 球拍的全速是球X方向速度，按照体力值比例下降
@@ -216,7 +223,8 @@ def op_life_consume(op_d, y0, op_chosen_v, y1, p_active_card):
     # 按照迎球的距离减少体力值（考虑我方可能使用变压器道具）
     op_life -= (abs(bat_distance) ** 2 // FACTOR_DISTANCE ** 2) * (CARD_AMPL_PARAM if p_active_card == CARD_AMPL else 1)
     # 按照给球加速度的指标减少体力值（考虑我方可能使用变压器道具）
-    op_life -= (abs(op_player_action.acc) ** 2 // FACTOR_SPEED ** 2) * (CARD_AMPL_PARAM if p_active_card == CARD_AMPL else 1)
+    op_life -= (abs(op_player_action.acc) ** 2 // FACTOR_SPEED ** 2) * (
+    CARD_AMPL_PARAM if p_active_card == CARD_AMPL else 1)
 
     # 如果指定跑位的距离大于最大速度的距离，则采用最大速度距离
     run_distance = sign(op_player_action.run) * min(abs(op_player_action.run), velocity * STEP)
@@ -237,8 +245,7 @@ def op_life_consume(op_d, y0, op_chosen_v, y1, p_active_card):
     return op_life
 
 
-
-def op_play(y1:pd.Series, v1:pd.Series, y0:int):
+def op_play(y1: pd.Series, v1: pd.Series, y0: int):
     """
     面对(y1,v1)，对手的选择
     :param y1: int，打到对手底线时球的y轴坐标
@@ -253,7 +260,8 @@ def op_play(y1:pd.Series, v1:pd.Series, y0:int):
     op_chosen_v = op_v[op_assume.argmax()]
     return op_chosen_v
 
-def op_assume_f(op_v:pd.Series, y1:pd.Series, v1:pd.Series, y0:int):
+
+def op_assume_f(op_v: pd.Series, y1: pd.Series, v1: pd.Series, y0: int):
     # 我始终觉得我们似不似把对手想的太傻了...这个算法我没仔细看，可能有不恰当
     """
     只会想一层的可爱对手使用的估值函数
@@ -265,14 +273,15 @@ def op_assume_f(op_v:pd.Series, y1:pd.Series, v1:pd.Series, y0:int):
     :return: Series，估值函数值（我方为接此球移动消耗体力与每次击球所消耗体力的差值）
     """
     # 对方将球从v1加速至op_v所消耗体力
-    op_lose = int(((op_v - v1)/FACTOR_SPEED)**2)
+    op_lose = int(((op_v - v1) / FACTOR_SPEED) ** 2)
     # 我方将从y0跑位至y0和y2之间的某一点，并到y2处迎球
     y2 = mirror2real(y1 + 1800 * op_v)[0]
     # C为可调试的常数，取值范围0.5-1，
-    p_lose = int(C * ((y0 - y2)/FACTOR_DISTANCE)**2)
+    p_lose = int(C * ((y0 - y2) / FACTOR_DISTANCE) ** 2)
     return p_lose - op_lose
 
-def ball_fly_to(y0:int, p_v_i:int) -> tuple:
+
+def ball_fly_to(y0: int, p_v_i: int) -> tuple:
     """
     根据出射点坐标、出射速度，算出到达对侧位置速度
     :param y0: 出射点坐标
@@ -290,7 +299,8 @@ def ball_fly_to(y0:int, p_v_i:int) -> tuple:
     v1 = p_v_i * ((count + 1) % 2 * 2 - 1)
     return y1, v1
 
-def mirror2real(y_mr:int or np.array or pd.Series)-> tuple:
+
+def mirror2real(y_mr: int or np.array or pd.Series) -> tuple:
     """
     将镜像点映射为真实点.
     可以代入int,np.array,pd.Series等多种类型
@@ -324,7 +334,7 @@ def mirror2real(y_mr:int or np.array or pd.Series)-> tuple:
         return pd.Series(y_real), pd.Series(count)
 
 
-def ball_fly_to_card(b_d:tuple, cards_al:list) -> list:
+def ball_fly_to_card(b_d: tuple, cards_al: list) -> list:
     """
     cards_al means cards_available
     根据桌面上现有的道具种类、位置和球所在的位置，计算吃到对应的各个道具所需要的竖直速度
@@ -342,7 +352,8 @@ def ball_fly_to_card(b_d:tuple, cards_al:list) -> list:
     # 返回吃到所有道具所需要的竖直速度，通过对应索引查找
     return vy_list
 
-def fly_assistant(b_d:tuple, v_range:tuple, card:Card) -> list:
+
+def fly_assistant(b_d: tuple, v_range: tuple, card: Card) -> list:
     """
     根据某个确定的道具位置和球所在的位置，计算吃到它所需要的竖直速度
     :param b_d: b_d = (tb.ball['position'].x,tb.ball['position'].y,tb.ball['velocity'].x,tb.ball['velocity'].y,tb.tick)
@@ -368,10 +379,11 @@ def fly_assistant(b_d:tuple, v_range:tuple, card:Card) -> list:
     # 在能到达道具的一系列速度中挑选出属于区间v_range的，保存到列表中并返回
     # 列表中的元素类型是int
     return [vy for vy in
-        filter(lambda v: (v >= v3 and v <= v2)or(v >= v1 and v <= v0),
-               map(lambda x: (x - y0) // card_step, y))]
+            filter(lambda v: (v >= v3 and v <= v2) or (v >= v1 and v <= v0),
+                   map(lambda x: (x - y0) // card_step, y))]
 
-def ball_v_range(b_d:tuple) -> tuple:
+
+def ball_v_range(b_d: tuple) -> tuple:
     """
     根据我方出射点坐标，算出y轴可取速度的边界值
     :param STEP: 1800 tick
@@ -391,7 +403,8 @@ def ball_v_range(b_d:tuple) -> tuple:
     # 返回一个元组，依次为速度的四个边界值
     return v0, v1, v2, v3
 
-def sec_kill(p_v:pd.Series, y0:int) -> pd.Series:
+
+def sec_kill(p_v: pd.Series, y0: int) -> pd.Series:
     """
     根据我方出射点坐标速度，判断对方简单反弹时是否可以秒杀
     :param p_v:pd.Series，出射点坐标速度

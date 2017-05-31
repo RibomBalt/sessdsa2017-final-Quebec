@@ -363,19 +363,21 @@ def fly_assistant(b_d: tuple, v_range: tuple, card: Card) -> list:
     :param y0: y0 = b_d[1]，接球时球的纵坐标
     :param vx0: vx0 = b_d[2]，球的水平速度
     :return: 返回一个list，元素为符合击中某道具要求的竖直速度
+    >>> print(fly_assistant((-900000, 80000, 1000, 50), ball_v_range((-900000, 80000, 1000, 50)), Card('SP', 0.5, Vector(200,10000))))
+    [-78, -100]
     """
     x0, y0, vx0 = b_d[0], b_d[1], b_d[2]
     # 满足规则（碰撞1-2次）的速度区间[v3,v2]∪[v1,v0]
     v0, v1, v2, v3 = v_range
     # 要吃的道具共有五个可能的镜像点/真实点，置于列表y中
-    y = []
-    y[0] = card.pos[1]
-    y[1] = 2 * Height + card.pos[1]
-    y[2] = 2 * Height - card.pos[1]
-    y[3] = -card.pos[1]
-    y[4] = -2 * Height + card.pos[1]
+    y = [0] * 5
+    y[0] = card.pos.y
+    y[1] = 2 * Height + card.pos.y
+    y[2] = 2 * Height - card.pos.y
+    y[3] = -card.pos.y
+    y[4] = -2 * Height + card.pos.y
     # 到达道具位置用时
-    card_step = abs(x0 - card.pos[0]) // vx0
+    card_step = abs(x0 - card.pos.x) // vx0
     # 在能到达道具的一系列速度中挑选出属于区间v_range的，保存到列表中并返回
     # 列表中的元素类型是int
     return [vy for vy in

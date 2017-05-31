@@ -370,6 +370,8 @@ def ball_v_range(b_d:tuple) -> tuple:
     # 贴边打的情况算作反弹零次，需要排除
     if v2 == 0:
         v2 = -1
+    elif v1 == 0:
+        v1 = 1
     # 返回一个元组，依次为速度的四个边界值
     return v0, v1, v2, v3
 

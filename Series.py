@@ -61,9 +61,9 @@ def play(tb: TableData, ds) -> RacketAction:
     # 计算双方决策后的“体力值”
     # 对于我方而言，不等同于体力值，因为加入了获得道具的“加分”。而且为了避免“吃老本”的情况，没有考虑加减血包的使用。
     # 对对方而言，也不等同于体力值，因为是只考虑一小部分的体力估值
-    p_life2, p_card_side, p_active_card = p_life_consume(b_d, p_d, op_d, cards_available, p_v, op_chosen_v, y1, v1)
-    op_life2 = op_life_consume(op_d, y0, op_chosen_v, y1, p_active_card)
-
+    p_life2, p_active_SPIN, p_active_AMPL = p_life_consume(b_d, p_d, op_d, cards_available, p_v, op_chosen_v, y1)
+    op_life2 = op_life_consume(op_d, y0, op_chosen_v, y1, p_active_SPIN, p_active_AMPL)
+###########TODO ！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
     # 获得我方估值函数值中的最大值对应索引
     p_path_assume = (p_life2 - p_life1) - (op_life2 - op_life1)
     index = p_path_assume.argmax()
@@ -88,8 +88,7 @@ def play(tb: TableData, ds) -> RacketAction:
     return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, p_chosen_v - v0, 0, p_chosen_side,p_chosen_card)
 
 
-def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v: pd.Series, op_chosen_v: pd.Series, y1: pd.Series,
-                   v1: pd.Series):
+def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v: pd.Series, op_chosen_v: pd.Series, y1: pd.Series):
     """
     根据我方此次决策，算出迎球+加速+跑位的总体力消耗(考虑道具)
     :param p_d: 决策前迎球方的信息
@@ -133,35 +132,36 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
     middle = (y2 + p_d[1]) // 2
 
     # TODO 道具的具体使用的阈值调整以及策略变动
-    # TODO 道具在估值函数中使用的实现（删去RacketAction使用道具Series）
     # 估值函数里不考虑加血包减血包的使用
-    p_active_card = pd.Series()
-    p_card_side = pd.Series()
+
+    # p_active_XXXX 为Series，元素类型为bool
     # 旋转球的使用（如果秒杀则使用）
     if CARD_SPIN in p_cards:
-        if sec_kill(p_v, y0):
-            p_active_card = CARD_SPIN
-            p_card_side = 'OPNT'
+        p_active_SPIN = sec_kill(p_v, y0)
+    else:
+        p_active_SPIN = None
     # 变压器的使用（对方总移动超过一半）
     if CARD_AMPL in p_cards:
-        if abs(y1 - op_ini_pos) > Height * 0.5:
-            p_active_card = CARD_AMPL
-            p_card_side = 'OPNT'
+        p_active_AMPL = (y1 - op_ini_pos).apply(abs) > Height * 0.5
+    else:
+        p_active_AMPL = None
     # 瞬移术的使用（跑位超过一半）
     if CARD_TLPT in p_cards:
-        if abs(middle - y0) > Height * 0.5:
-            p_active_card = CARD_TLPT
-            p_card_side = 'SELF'
+        p_active_TLPT = (middle - y0).apply(abs) > Height * 0.5
+    else:
+        p_active_TLPT = None
 
-    # 获取我方可能的决策结果
-    player_action = RacketAction(b_d[4], y0 - p_d[1], p_v - v0, middle, p_card_side, p_active_card)
-
+    # 获取我方可能的决策结果 RacketAction(b_d[4], y0 - p_d[1], p_v - v0, middle, p_card_side, p_active_card)
     # 将迎球方动作中的距离速度等值规整化为整数
-    player_action.normalize()
+    player_action_bat = (y0 - p_d[1]).apply(int) # t0~t1迎球的动作矢量（移动方向及距离）
+    player_action_acc = (p_v - v0).apply(int)  # t1触球加速矢量（加速的方向及速度）
+    player_action_run = middle.apply(int)# t1~t2跑位的动作矢量（移动方向及距离）
+    # player_action_card = (p_card_side, p_active_card)  # 对'SELF'/'OPNT'使用道具
+
     # 球拍的全速是球X方向速度，按照体力值比例下降
     velocity = int((p_life / RACKET_LIFE) * BALL_V[1])
     # bat_distance 为指定迎球的距离
-    bat_distance = player_action.bat
+    bat_distance = player_action_bat
 
     # 如果指定迎球的距离大于最大速度的距离，则丢球，比赛结束
     if abs(bat_distance) > velocity * STEP:
@@ -170,77 +170,82 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
     # 按照迎球的距离减少体力值（考虑对方之前可能使用变压器道具）
     p_life -= (abs(bat_distance) ** 2 // FACTOR_DISTANCE ** 2) * (CARD_AMPL_PARAM if op_active_card == CARD_AMPL else 1)
     # 按照给球加速度的指标减少体力值（考虑对方之前可能使用变压器道具）
-    p_life -= (abs(player_action.acc) ** 2 // FACTOR_SPEED ** 2) * (
-    CARD_AMPL_PARAM if op_active_card == CARD_AMPL else 1)
+    p_life -= (abs(player_action_acc) ** 2 // FACTOR_SPEED ** 2) * (CARD_AMPL_PARAM if op_active_card == CARD_AMPL else 1)
 
     # 如果指定跑位的距离大于最大速度的距离，则采用最大速度距离
-    run_distance = sign(player_action.run) * min(abs(player_action.run), velocity * STEP)
+    run_distance = player_action_run.apply(sign) * \
+                   player_action_run.apply(abs).where(player_action_run.apply(abs) < velocity * STEP,velocity * STEP)
+    # \后面的代码作用于int时为 min(abs(player_action_run), velocity * STEP)
+
     # 按照跑位的距离减少体力值（考虑我方可能使用瞬移卡道具）
     param = 0
-    if player_action.card[1] == CARD_TLPT:  # 如果碰到瞬移卡，则从距离减去CARD_TLPT_PARAM再计算体力值减少
+    if CARD_TLPT in p_cards: # 如果使用瞬移卡，从距离减去CARD_TLPT_PARAM再计算体力值减少
         param = CARD_TLPT_PARAM
-    if abs(run_distance) - param > 0:
-        p_life -= (abs(run_distance) - param) ** 2 // FACTOR_DISTANCE ** 2
+
+    a = (run_distance.apply(abs) - param) ** 2 // FACTOR_DISTANCE ** 2
+    b = run_distance.apply(sign) - param
+    p_life -= a.where(b > 0, 0)
+    '''# 作用于int时的代码 
+    if sign(run_distance) - param > 0:
+        p_life -= (abs(run_distance) - param) ** 2 // FACTOR_DISTANCE ** 2'''
+
     # 返回执行决策后p_life,p_card_side和p_active_card
-    return p_life, p_card_side, p_active_card
+    return p_life, p_active_SPIN, p_active_AMPL
 
 
-def op_life_consume(op_d, y0, op_chosen_v, y1, p_active_card):
+def op_life_consume(op_d, y0, op_chosen_v, y1, p_active_SPIN, p_active_AMPL)->pd.Series:
     """
     根据我方此次决策，算出迎球+加速+跑位的总体力消耗(考虑道具)
-    :param player_data: 决策前迎球方的信息
-    :param op_player_data: 决策前跑位方的信息
-    :param player_action: 我方此次决策结果 RocketAction类
-    :param bat_distance: 此次决策指定迎球的距离
-    :param run_distance: 此次决策指定跑位的距离
-    :param p_d = (tb.side["life"])
+    :param p_active_SPIN: Series，不同路径使用CARD_SPIN的情况，元素为bool
+    :param p_active_AMPL: Series，不同路径使用CARD_AMPL的情况，元素为bool
+    :param p_active_TLPT: Series，不同路径使用CARD_TLPT的情况，元素为bool
     :param op_d = (tb.op_side["life"], tb.op_side["active_card"])
-    :return: 执行完决策后我方体力值
+    :return: 执行完决策后对方体力值
     """
     op_life = op_d[0]
     op_vy = op_chosen_v
     op_y = y1
-    op_life -= CARD_DECL_PARAM
+
     # 对方决策在我方处的落点
     y2, v2 = ball_fly_to(op_y, op_vy)
     # 对方跑位到我方落点与当下位置中某一点
     middle = Ct * (y2 - op_y) + op_y
+
     # 获取对方的决策结果
-    # TODO 改掉RacketAction变为直接使用Series
-    # TODO 还要加入对我方使用旋转球的应对
-    op_player_action = RacketAction(7200, Ct * (y2 - y0) + y0, op_vy - v2, middle, None, None)  # 下文中tick没用，随便取一个合法值
+    # TODO 还要当我方使用旋转球时加入对方的应对
+
+    # 获取对方可能的决策结果 RacketAction(7200, Ct * (y2 - y0) + y0, op_vy - v2, middle, None, None) 下文中tick没用，随便取一个合法值
     # 将迎球方动作中的距离速度等值规整化为整数
-    op_player_action.normalize()
+    op_player_action_bat = (Ct * (y2 - y0) + y0).apply(int)  # t0~t1迎球的动作矢量（移动方向及距离）
+    op_player_action_acc = (op_vy - v2).apply(int)  # t1触球加速矢量（加速的方向及速度）
+    op_player_action_run = middle.apply(int)  # t1~t2跑位的动作矢量（移动方向及距离）
+
+
     # 球拍的全速是球X方向速度，按照体力值比例下降
     velocity = int((op_life / RACKET_LIFE) * BALL_V[1])
-    # bat_distance 为指定迎球的距离
-    bat_distance = op_player_action.bat
 
     # 如果指定迎球的距离大于最大速度的距离，则丢球，比赛结束
-    if abs(bat_distance) > velocity * STEP:
+    # TODO 这个False可能有问题
+    if abs(op_player_action_bat) > velocity * STEP:
         return False
 
+    # 按照迎球的距离以及给球加速度的指标减少体力值（考虑我方可能使用变压器道具）
+    a = op_player_action_bat.apply(abs) ** 2 // FACTOR_DISTANCE ** 2 + op_player_action_acc.apply(abs) ** 2 // FACTOR_SPEED ** 2
+    b = pd.Series(CARD_AMPL_PARAM, range(op_chosen_v.size))
+    op_life -= a * b.where(p_active_AMPL, 1)
+    '''# 作用于int时的代码
     # 按照迎球的距离减少体力值（考虑我方可能使用变压器道具）
-    op_life -= (abs(bat_distance) ** 2 // FACTOR_DISTANCE ** 2) * (CARD_AMPL_PARAM if p_active_card == CARD_AMPL else 1)
+    op_life -= (abs(op_player_action_bat) ** 2 // FACTOR_DISTANCE ** 2) * (CARD_AMPL_PARAM if p_active_card == CARD_AMPL else 1)
     # 按照给球加速度的指标减少体力值（考虑我方可能使用变压器道具）
-    op_life -= (abs(op_player_action.acc) ** 2 // FACTOR_SPEED ** 2) * (
-    CARD_AMPL_PARAM if p_active_card == CARD_AMPL else 1)
-
-    # 如果指定跑位的距离大于最大速度的距离，则采用最大速度距离
-    run_distance = sign(op_player_action.run) * min(abs(op_player_action.run), velocity * STEP)
-    '''    
-    # 按照跑位的距离减少体力值（考虑对方可能使用瞬移卡道具）
-    param = 0
-    if op_player_action.card[1] == CARD_TLPT:  # 如果碰到瞬移卡，则从距离减去CARD_TLPT_PARAM再计算体力值减少
-        param = CARD_TLPT_PARAM
-    if abs(run_distance) - param > 0:
-        op_life -= (abs(run_distance) - param) ** 2 // FACTOR_DISTANCE ** 2
-    # 考虑对方可能使用加血包道具
-    if op_player_action.card[1] == CARD_INCL:
-        op_life += CARD_INCL_PARAM
+    op_life -= (abs(op_player_action_acc) ** 2 // FACTOR_SPEED ** 2) * (CARD_AMPL_PARAM if p_active_card == CARD_AMPL else 1)
     '''
-    # 按照跑位的距离减少体力值（听说对方不用道具，上方判断无用）
-    op_life -= abs(run_distance) ** 2 // FACTOR_DISTANCE ** 2
+    # 如果指定跑位的距离大于最大速度的距离，则采用最大速度距离
+    run_distance = op_player_action_run.apply(sign) * \
+                   op_player_action_run.apply(abs).where(op_player_action_run.apply(abs) < velocity * STEP,velocity * STEP)
+    # \后面的代码作用于int时为 min(abs(op_player_action_run), velocity * STEP)
+
+    # 按照跑位的距离减少体力值（听说对方不用道具）
+    op_life -= run_distance.apply(abs) ** 2 // FACTOR_DISTANCE ** 2
     # 返回执行决策后op_life
     return op_life
 

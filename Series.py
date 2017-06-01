@@ -131,7 +131,7 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
     # 我方决策跑位到 对方决策后在我方的落点 与 当下位置的中点
     middle = (y2 + p_d[1]) // 2
 
-    # TODO 道具的具体使用的阈值调整以及策略变动
+    # TODO 道具的具体使用的阈值调整以及策略变动 注意！！！！这里是道具使用！！不是路径上的道具获取！！！
     # 估值函数里不考虑加血包减血包的使用
 
     # p_active_XXXX 为Series，元素类型为bool
@@ -179,7 +179,8 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
 
     # 按照跑位的距离减少体力值（考虑我方可能使用瞬移卡道具）
     param = 0
-    if CARD_TLPT in p_cards: # 如果使用瞬移卡，从距离减去CARD_TLPT_PARAM再计算体力值减少
+    # TODO 等等！！！！这里道具使用好像有问题！！！！
+    if p_active_TLPT: # 如果使用瞬移卡，从距离减去CARD_TLPT_PARAM再计算体力值减少
         param = CARD_TLPT_PARAM
 
     a = (run_distance.apply(abs) - param) ** 2 // FACTOR_DISTANCE ** 2

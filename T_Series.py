@@ -232,7 +232,10 @@ def op_life_consume(op_d, y0, op_chosen_v, y1, p_active_SPIN, p_active_AMPL)->pd
     op_player_action_bat = (Ct * (y2 - y0) + y0).apply(int)  # t0~t1迎球的动作矢量（移动方向及距离）
 
     min_op_vy = y1.apply(ball_v_range).apply(min)
-    op_player_action_acc = (op_vy - v2).where(-p_active_SPIN, min_op_vy).apply(int)
+    if p_active_SPIN is None:
+        op_player_action_acc = min_op_vy.apply(int)
+    else:
+        op_player_action_acc = (op_vy - v2).where((-p_active_SPIN), min_op_vy).apply(int)
     # 这行代码是对我方使用旋转球的处理，相当于是从我们的视角替对方“纠正”了自己的策略
     op_player_action_run = middle.apply(int)  # t1~t2跑位的动作矢量（移动方向及距离）
 
@@ -245,7 +248,10 @@ def op_life_consume(op_d, y0, op_chosen_v, y1, p_active_SPIN, p_active_AMPL)->pd
     # 按照迎球的距离以及给球加速度的指标减少体力值（考虑我方可能使用变压器道具）a,b是为了简化式子的无意义临时变量
     a = op_player_action_bat.apply(abs) ** 2 // FACTOR_DISTANCE ** 2 + op_player_action_acc.apply(abs) ** 2 // FACTOR_SPEED ** 2
     b = pd.Series(CARD_AMPL_PARAM, range(op_chosen_v.size))
-    op_life -= a * b.where(p_active_AMPL, 1)
+    if p_active_AMPL is None:
+        op_life -= a
+    else:
+        op_life -= a * b.where(p_active_AMPL, 1)
     '''# 作用于int时的代码
     # 按照迎球的距离减少体力值（考虑我方可能使用变压器道具）
     op_life -= (abs(op_player_action_bat) ** 2 // FACTOR_DISTANCE ** 2) * (CARD_AMPL_PARAM if p_active_card == CARD_AMPL else 1)
@@ -364,7 +370,7 @@ def ball_fly_to_card(b_d: tuple, cards_al: list) -> list:
     >>> ball_fly_to_card((-900000, 80000, 1000, 50), [Card('SP', 0.5, Vector(200,10000))])
     [[-78, -100]]
     """
-    v_range = ball_v_range(b_d[2])
+    v_range = ball_v_range(b_d[1])
     # 吃到序号为i的道具需要的速度（所有可能的速度）保存在v[i]中
     vy_list = [0] * len(cards_al)
     for i in range(len(cards_al)):

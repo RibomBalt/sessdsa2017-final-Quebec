@@ -35,18 +35,18 @@ def play(tb: TableData, ds) -> RacketAction:
     op_d = (tb.op_side["life"], tb.op_side["active_card"], tb.op_side['position'].y)
     # 创建cards元组
     cards = (tb.cards['card_tick'], tb.cards['cards'])
-    # TODO 创建道具Series
     # ——————————————————————————————————————————————————————————————————————————————#
     y0, v0 = b_d[1], b_d[3]
     # cards_available:桌面上现有的道具列表，元素为Card类
     cards_available = cards[1]
+    op_active_card = op_d[1]
     # 对方上一轮迎球加速跑位加减血道具生效而我方尚未作出迎球反应时双方体力值
     p_life1, op_life1 = p_d[0], op_d[0]
     # 我方拥有的道具list,为CardBox类
     p_cards = p_d[2]
 
-    # TODO 改系数，获得合理的等距v的Series，会用到ball_v_range(b_d)
-    p_v = pd.Series([1000 * i for i in range(50)])
+    # TODO 改系数，获得合理的等距v的Series，会用到ball_v_range(y)
+    p_v = pd.Series([1000 * i for i in range(50)]) * (CARD_SPIN_PARAM if op_active_card == CARD_SPIN else 1)
 
     # v_will_hit:list，其元素为list，即为符合击中某道具要求的竖直速度群，vy_list的元素和cards_al的元素是对应关系
     v_will_hit = ball_fly_to_card(b_d, cards_available)
@@ -61,17 +61,27 @@ def play(tb: TableData, ds) -> RacketAction:
     # 计算双方决策后的“体力值”
     # 对于我方而言，不等同于体力值，因为加入了获得道具的“加分”。而且为了避免“吃老本”的情况，没有考虑加减血包的使用。
     # 对对方而言，也不等同于体力值，因为是只考虑一小部分的体力估值
-    p_life2, p_active_SPIN, p_active_AMPL = p_life_consume(b_d, p_d, op_d, cards_available, p_v, op_chosen_v, y1)
+    p_life2, p_active_SPIN, p_active_AMPL, p_active_TLPT = p_life_consume(b_d, p_d, op_d, cards_available, p_v, op_chosen_v, y1)
+    # 补充：我的考虑是，如果我方使用旋转球，对方会采取简单反弹（不秒杀）或者最小改变min(ball_v_range)
     op_life2 = op_life_consume(op_d, y0, op_chosen_v, y1, p_active_SPIN, p_active_AMPL)
-###########TODO ！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
+
     # 获得我方估值函数值中的最大值对应索引
     p_path_assume = (p_life2 - p_life1) - (op_life2 - op_life1)
     index = p_path_assume.argmax()
-
     # 返回具体打球方式
+    p_chosen_side = None
+    p_chosen_card = None
     p_chosen_v = p_v[index]
-    p_chosen_side = p_card_side[index]
-    p_chosen_card = p_active_card[index]
+    if p_active_SPIN and p_active_SPIN[index]: # equal if CARD_SPIN in p_cards and p_active_SPIN[index] :下同
+        p_chosen_side = 'OPNT'
+        p_chosen_card = CARD_SPIN
+    if p_active_AMPL and p_active_AMPL[index]:
+        p_chosen_side = 'OPNT'
+        p_chosen_card = CARD_AMPL
+    if p_active_TLPT and p_active_TLPT[index]:
+        p_chosen_side = 'SELF'
+        p_chosen_card = CARD_TLPT
+
     # 如果没有使用道具而恰好有加减血包，现在是优先使用减血包，属于攻击性策略。
     if p_chosen_side == None and p_chosen_card == None:
         if CARD_DECL in p_cards:
@@ -84,7 +94,6 @@ def play(tb: TableData, ds) -> RacketAction:
             if CARD_DSPR in p_cards:
                 p_chosen_side = 'SELF'
                 p_chosen_card = CARD_DSPR
-    # TODO 还要加入对方使用旋转球的应对
     return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, p_chosen_v - v0, 0, p_chosen_side,p_chosen_card)
 
 
@@ -130,10 +139,8 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
     y2, v2 = ball_fly_to(y1, op_chosen_v)
     # 我方决策跑位到 对方决策后在我方的落点 与 当下位置的中点
     middle = (y2 + p_d[1]) // 2
-
-    # TODO 道具的具体使用的阈值调整以及策略变动 注意！！！！这里是道具使用！！不是路径上的道具获取！！！
+    # TODO 道具的具体使用的阈值调整以及策略变动 注意！这里是道具使用！不是路径上的道具获取！
     # 估值函数里不考虑加血包减血包的使用
-
     # p_active_XXXX 为Series，元素类型为bool
     # 旋转球的使用（如果秒杀则使用）
     if CARD_SPIN in p_cards:
@@ -168,9 +175,9 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
         return False
 
     # 按照迎球的距离减少体力值（考虑对方之前可能使用变压器道具）
-    p_life -= (abs(bat_distance) ** 2 // FACTOR_DISTANCE ** 2) * (CARD_AMPL_PARAM if op_active_card == CARD_AMPL else 1)
+    p_life -= (bat_distance.apply(abs) ** 2 // FACTOR_DISTANCE ** 2) * (CARD_AMPL_PARAM if op_active_card == CARD_AMPL else 1)
     # 按照给球加速度的指标减少体力值（考虑对方之前可能使用变压器道具）
-    p_life -= (abs(player_action_acc) ** 2 // FACTOR_SPEED ** 2) * (CARD_AMPL_PARAM if op_active_card == CARD_AMPL else 1)
+    p_life -= (player_action_acc.apply(abs) ** 2 // FACTOR_SPEED ** 2) * (CARD_AMPL_PARAM if op_active_card == CARD_AMPL else 1)
 
     # 如果指定跑位的距离大于最大速度的距离，则采用最大速度距离
     run_distance = player_action_run.apply(sign) * \
@@ -179,19 +186,16 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
 
     # 按照跑位的距离减少体力值（考虑我方可能使用瞬移卡道具）
     param = 0
-    # TODO 等等！！！！这里道具使用好像有问题！！！！
     if p_active_TLPT: # 如果使用瞬移卡，从距离减去CARD_TLPT_PARAM再计算体力值减少
         param = CARD_TLPT_PARAM
-
     a = (run_distance.apply(abs) - param) ** 2 // FACTOR_DISTANCE ** 2
     b = run_distance.apply(sign) - param
     p_life -= a.where(b > 0, 0)
     '''# 作用于int时的代码 
     if sign(run_distance) - param > 0:
         p_life -= (abs(run_distance) - param) ** 2 // FACTOR_DISTANCE ** 2'''
-
     # 返回执行决策后p_life,p_card_side和p_active_card
-    return p_life, p_active_SPIN, p_active_AMPL
+    return p_life, p_active_SPIN, p_active_AMPL, p_active_TLPT
 
 
 def op_life_consume(op_d, y0, op_chosen_v, y1, p_active_SPIN, p_active_AMPL)->pd.Series:
@@ -212,25 +216,21 @@ def op_life_consume(op_d, y0, op_chosen_v, y1, p_active_SPIN, p_active_AMPL)->pd
     # 对方跑位到我方落点与当下位置中某一点
     middle = Ct * (y2 - op_y) + op_y
 
-    # 获取对方的决策结果
-    # TODO 还要当我方使用旋转球时加入对方的应对
-
     # 获取对方可能的决策结果 RacketAction(7200, Ct * (y2 - y0) + y0, op_vy - v2, middle, None, None) 下文中tick没用，随便取一个合法值
     # 将迎球方动作中的距离速度等值规整化为整数
     op_player_action_bat = (Ct * (y2 - y0) + y0).apply(int)  # t0~t1迎球的动作矢量（移动方向及距离）
-    op_player_action_acc = (op_vy - v2).apply(int)  # t1触球加速矢量（加速的方向及速度）
+    min_op_vy = ball_v_range(y1).apply(min)
+    op_player_action_acc = (op_vy - v2).where(not p_active_SPIN, min_op_vy).apply(int)
+    # 这行代码是对我方使用旋转球的处理，相当于是从我们的视角替对方“纠正”了自己的策略
     op_player_action_run = middle.apply(int)  # t1~t2跑位的动作矢量（移动方向及距离）
-
 
     # 球拍的全速是球X方向速度，按照体力值比例下降
     velocity = int((op_life / RACKET_LIFE) * BALL_V[1])
 
-    # 如果指定迎球的距离大于最大速度的距离，则丢球，比赛结束
-    # TODO 这个False可能有问题
-    if abs(op_player_action_bat) > velocity * STEP:
-        return False
+    # TODO 如果指定迎球的距离大于最大速度的距离，则对方丢球，比赛结束，故将此时对方迎球距离设为保证此路径估值最大。
+    op_player_action_bat.apply(abs).where(op_player_action_bat.apply(abs) <= velocity * STEP, 10000000)
 
-    # 按照迎球的距离以及给球加速度的指标减少体力值（考虑我方可能使用变压器道具）
+    # 按照迎球的距离以及给球加速度的指标减少体力值（考虑我方可能使用变压器道具）a,b是为了简化式子的无意义临时变量
     a = op_player_action_bat.apply(abs) ** 2 // FACTOR_DISTANCE ** 2 + op_player_action_acc.apply(abs) ** 2 // FACTOR_SPEED ** 2
     b = pd.Series(CARD_AMPL_PARAM, range(op_chosen_v.size))
     op_life -= a * b.where(p_active_AMPL, 1)
@@ -352,7 +352,7 @@ def ball_fly_to_card(b_d: tuple, cards_al: list) -> list:
     >>> ball_fly_to_card((-900000, 80000, 1000, 50), [Card('SP', 0.5, Vector(200,10000))])
     [[-78, -100]]
     """
-    v_range = ball_v_range(b_d)
+    v_range = ball_v_range(b_d[2])
     # 吃到序号为i的道具需要的速度（所有可能的速度）保存在v[i]中
     vy_list = [0] * len(cards_al)
     for i in range(len(cards_al)):
@@ -393,7 +393,7 @@ def fly_assistant(b_d: tuple, v_range: tuple, card: Card) -> list:
                    map(lambda x: (x - y0) // card_step, y))]
 
 
-def ball_v_range(b_d: tuple) -> tuple:
+def ball_v_range(y:int) -> tuple:
     """
     根据我方出射点坐标，算出y轴可取速度的边界值
     :param STEP: 1800 tick
@@ -401,10 +401,10 @@ def ball_v_range(b_d: tuple) -> tuple:
     :return: 可取速度的边界
     """
     # v0,v1,v2,v3是速度的范围边界:可取[v3,v2]∪[v1,v0]
-    v0 = (3 * Height - b_d[2]) // STEP
-    v1 = (1 * Height - b_d[2]) // STEP + 1
-    v2 = (0 - b_d[2]) // STEP
-    v3 = (-2 * Height - b_d[2]) // STEP + 1
+    v0 = (3 * Height - y) // STEP
+    v1 = (1 * Height - y) // STEP + 1
+    v2 = (0 - y) // STEP
+    v3 = (-2 * Height - y) // STEP + 1
     # 贴边打的情况算作反弹零次，需要排除
     if v2 == 0:
         v2 = -1
@@ -428,13 +428,9 @@ def sec_kill(p_v: pd.Series, y0: int) -> pd.Series:
     Y = y0 + STEP * p_v
     # 把镜像点Y转化为真实点，然后求合法速度区间
     y, count = mirror2real(Y)
+    # 对方竖直速度范围 v_range：tuple 元素为四个Series
     v_range = ball_v_range(y)
-    # 对方接球时的竖直速度函数
-    # 这句写给金老师：pd.Series直接不能用where，但是pd.Series.values返回值的np.array，可以用np.where。彻底解决。
-    # 另外pd.Series基于np.array实现，两种类型几乎是秒转换，不必担心效率。
-
-    # op_v = p_v if (count % 2 == 0) else (- p_v)
-    op_v = pd.Series(np.where(count.values % 2 == 0, p_v, -p_v))
     # 返回True or False，True表示会被秒杀，False表示不会
+    op_v = p_v.where(count % 2 == 0, -p_v) # op_v = p_v if (count % 2 == 0) else (- p_v)
     # 经测试，逻辑连接符可以用&|-表示与或非，但是似乎不可以用and,or,not。注意优先级不同，必须加括号
     return -(((op_v >= v_range[3]) & (op_v <= v_range[2])) | ((op_v >= v_range[1]) & (op_v <= v_range[0])))

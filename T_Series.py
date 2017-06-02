@@ -51,7 +51,8 @@ def play(tb: TableData, ds) -> RacketAction:
     p_cards = p_d[2]
 
     # TODO 改系数，获得合理的等距v的Series，会用到ball_v_range(y)
-    p_v = pd.Series([1000 * i for i in range(50)]) * (CARD_SPIN_PARAM if op_active_card == CARD_SPIN else 1)
+    v00, v01, v02, v03 = ball_v_range(y0)
+    p_v = pd.Series([i for i in range(v03,v02,20)] + [j for j in range(v01,v00,20)]) * (CARD_SPIN_PARAM if op_active_card == CARD_SPIN else 1)
 
     # v_will_hit:list，其元素为list，即为符合击中某道具要求的竖直速度群，v_will_list的元素和cards_al的元素是对应关系
     v_will_hit = ball_fly_to_card(b_d, cards_available)
@@ -115,7 +116,7 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
     """
     # 我方拥有的道具list,为CardBox类
     p_cards = p_d[2]
-    p_life = p_d[0]
+    p_life = pd.Series(p_d[0],range(op_chosen_v.size))
     # op_ini_pos 对手跑位前位置
     op_active_card, op_ini_pos = op_d[1], op_d[2]
     y0, v0 = b_d[1], b_d[3]
@@ -133,6 +134,8 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
             health_change = 918
         elif card_i == CARD_SPIN:
             health_change = 918
+        else:
+            health_change = 0
 
         p_life[p_v[p_v.apply(lambda x: x in v_will_hit)].index] += health_change
     '''
@@ -168,22 +171,23 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
     # 获取我方可能的决策结果 RacketAction(b_d[4], y0 - p_d[1], p_v - v0, middle, p_card_side, p_active_card)
     # 将迎球方动作中的距离速度等值规整化为整数
 
-    player_action_bat = int(y0 - p_d[1]) # t0~t1迎球的动作矢量（移动方向及距离）
+    # player_action_bat = int(y0 - p_d[1]) # t0~t1迎球的动作矢量（移动方向及距离）
     player_action_acc = (p_v - v0).apply(int) # t1触球加速矢量（加速的方向及速度）
     player_action_run = middle.apply(int) # t1~t2跑位的动作矢量（移动方向及距离）
     # player_action_card = (p_card_side, p_active_card)  # 对'SELF'/'OPNT'使用道具
 
     # 球拍的全速是球X方向速度，按照体力值比例下降
-    velocity = int((p_life / RACKET_LIFE) * BALL_V[1])
+    velocity = ((p_life / RACKET_LIFE) * BALL_V[1]).apply(int)
     # bat_distance 为指定迎球的距离
-    bat_distance = player_action_bat
+    # bat_distance = player_action_bat
 
     # 如果指定迎球的距离大于最大速度的距离，则丢球，比赛结束
-    if abs(bat_distance) > velocity * STEP:
-        return False
+    # if abs(bat_distance) > velocity[0] * STEP:
+    #     return False
+    # bat_distance.apply(abs).where(bat_distance.apply(abs) <= velocity * STEP, 10000000)
 
     # 按照迎球的距离减少体力值（考虑对方之前可能使用变压器道具）
-    p_life -= (abs(bat_distance) ** 2 // FACTOR_DISTANCE ** 2) * (CARD_AMPL_PARAM if op_active_card == CARD_AMPL else 1)
+    # p_life -= (abs(bat_distance) ** 2 // FACTOR_DISTANCE ** 2) * (CARD_AMPL_PARAM if op_active_card == CARD_AMPL else 1)
     # 按照给球加速度的指标减少体力值（考虑对方之前可能使用变压器道具）
     p_life -= (player_action_acc.apply(abs) ** 2 // FACTOR_SPEED ** 2) * (CARD_AMPL_PARAM if op_active_card == CARD_AMPL else 1)
 
@@ -279,7 +283,7 @@ def op_play(y0:int, y1: pd.Series, v1: pd.Series):
     :return: int，对手最终决定的回球方式
     """
     # TODO 改系数，获得合理的等距v的Series
-    op_v = pd.Series([1000 * i for i in range(1,5)])
+    op_v = pd.Series([i for i in range(0,100,20)] + [j for j in range(300,400,20)])
     op_chosen_v = (op_v.apply(op_assume_f, y1=y1, v1=v1, y0=y0)).swapaxes(0, 1).apply(lambda x : op_v[x.idxmax()],axis = 1)
     # op_chosen_v = pd.Series(op_v[op_assume.argmax()])
     return op_chosen_v
@@ -424,10 +428,14 @@ def ball_v_range(y:int) -> tuple:
     v2 = (0 - y) // STEP
     v3 = (-2 * Height - y) // STEP + 1
     # 贴边打的情况算作反弹零次，需要排除
-    if v2 == 0:
-        v2 = -1
-    elif v1 == 0:
-        v1 = 1
+    if type(v2) is int:
+        if v2 == 0:
+            v2 = -1
+        elif v1 == 0:
+            v1 = 1
+    if type(v2) is pd.Series:
+        v2[v2 == 0] = -1
+        v1[v1 == 0] = 1
     # 返回一个元组，依次为速度的四个边界值
     return v0, v1, v2, v3
 

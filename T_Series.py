@@ -329,7 +329,26 @@ def ball_fly_to(y: int, v: int) -> tuple:
     :param Y: int，镜像点y坐标
     :param count: 与桌碰撞次数，可正可负
     :return: 到达对侧位置位置、速度
+    >>> ball_fly_to(0,50)
+    (90000, 50)
+    >>> ball_fly_to(0,556)
+    (999200, -556)
+    >>> ball_fly_to(200,1111)
+    (0, 1111)
+    >>> ball_fly_to(pd.Series([3000,1600]),pd.Series([1665,-1112]))
+    (0    1000000
+    1          0
+    dtype: int64, 0   -1665
+    1    1112
+    dtype: int64)
+    >>> ball_fly_to(pd.Series([3000,1600]),100)
+    (0    183000
+    1    181600
+    dtype: int64, 0    100
+    1    100
+    dtype: int64)
     """
+    # 已完成测试
     # Y 为没有墙壁时乒乓球到达的位置（镜像点）
     Y = y + v * STEP
     # 把镜像点转化为真实点
@@ -346,7 +365,38 @@ def mirror2real(y_mr: int or np.array or pd.Series) -> tuple:
     可以代入int,np.array,pd.Series等多种类型
     :param y_mr: 镜像点y坐标
     :return: 真实点y坐标数组（范围0-1,000,000），碰撞次数数组
+    >>> mirror2real(0)
+    (0, 1)
+    >>> mirror2real(1000000)
+    (1000000, 1)
+    >>> mirror2real(500000)
+    (500000, 0)
+    >>> mirror2real(3000000)
+    (1000000, 3)
+    >>> mirror2real(2999999)
+    (999999, 2)
+    >>> mirror2real(-1999999)
+    (1, -2)
+    >>> mirror2real(-2000000)
+    (0, 3)
+    >>> mirror2real(pd.Series([0,1000000,500000,3000000,2999998,-1999999,-2000000]))
+    (0          0
+    1    1000000
+    2     500000
+    3    1000000
+    4     999998
+    5          1
+    6          0
+    dtype: int64, 0    1
+    1    1
+    2    0
+    3    3
+    4    2
+    5   -2
+    6    3
+    dtype: int64)
     """
+    # 已完成测试
     if type(y_mr) is int:
         if y_mr % (2 * Height) < Height:
             y_real = y_mr % Height
@@ -386,6 +436,7 @@ def ball_fly_to_card(b_d: tuple, cards_al: list) -> list:
     >>> ball_fly_to_card((-900000, 80000, 1000, 50), [Card('SP', 0.5, Vector(200,10000))])
     [[-78, -100]]
     """
+    # 已完成测试
     v_range = ball_v_range(b_d[1])
     # 吃到序号为i的道具需要的速度（所有可能的速度）保存在v[i]中
     vy_list = [0] * len(cards_al)
@@ -405,9 +456,10 @@ def fly_assistant(b_d: tuple, v_range: tuple, card: Card) -> list:
     :param y0: y0 = b_d[1]，接球时球的纵坐标
     :param vx0: vx0 = b_d[2]，球的水平速度
     :return: 返回一个list，元素为符合击中某道具要求的竖直速度
-    >>> print(fly_assistant((-900000, 80000, 1000, 50), ball_v_range((-900000, 80000, 1000, 50)), Card('SP', 0.5, Vector(200,10000))))
+    >>> fly_assistant((-900000, 80000, 1000, 50), ball_v_range(80000),Card('SP', 0.5, Vector(200,10000)))
     [-78, -100]
     """
+    # 已完成测试
     x0, y0, vx0 = b_d[0], b_d[1], b_d[2]
     # 满足规则（碰撞1-2次）的速度区间[v3,v2]∪[v1,v0]
     v0, v1, v2, v3 = v_range
@@ -427,27 +479,42 @@ def fly_assistant(b_d: tuple, v_range: tuple, card: Card) -> list:
                    map(lambda x: (x - y0) // card_step, y))]
 
 
-def ball_v_range(y:int) -> tuple:
+def ball_v_range(y:int or pd.Series) -> tuple:
     """
     根据我方出射点坐标，算出y轴可取速度的边界值
     :param STEP: 1800 tick
     :param b_d[2]: b_d[2] = tb.ball['position'].y,接球时球的纵坐标
     :return: 可取速度的边界
+    >>> ball_v_range(0)
+    (1666, 556, -1, -1111)
+    >>> ball_v_range(1000000)
+    (1111, 1, -556, -1666)
+    >>> ball_v_range(500000)
+    (1388, 278, -278, -1388)
+    >>> ball_v_range(pd.Series([0,1000000]))
+    (0    1666
+    1    1111
+    dtype: int64, 0    556
+    1      1
+    dtype: int64, 0     -1
+    1   -556
+    dtype: int64, 0   -1111
+    1   -1666
+    dtype: int64)
     """
+    # 已完成测试
     # v0,v1,v2,v3是速度的范围边界:可取[v3,v2]∪[v1,v0]
     v0 = (3 * Height - y) // STEP
     v1 = (1 * Height - y) // STEP + 1
     v2 = (0 - y) // STEP
     v3 = (-2 * Height - y) // STEP + 1
     # 贴边打的情况算作反弹零次，需要排除
+    # 只有v2才会和y同时取到零，v1不会出现这种情况
     if type(v2) is int:
         if v2 == 0:
             v2 = -1
-        elif v1 == 0:
-            v1 = 1
     if type(v2) is pd.Series:
-        v2[v2 == 0] = -1
-        v1[v1 == 0] = 1
+        v2 = v2.where(v2 != 0, -1)
     # 返回一个元组，依次为速度的四个边界值
     return v0, v1, v2, v3
 
@@ -458,10 +525,12 @@ def sec_kill(p_v: pd.Series, y0: int) -> pd.Series:
     :param p_v:pd.Series，出射点坐标速度
     :param y0:int，出射点坐标坐标
     :return: pd.Series  元素为bool类型
-    >>> a = sec_kill(pd.Series(range(-1000, 400)), 10)
-    >>> print(a[a].count(), a.count())
-    842 1400
+    >>> sec_kill(pd.Series([-1000, 400]), 10)
+    0    False
+    1    False
+    dtype: bool
     """
+    # 已完成测试
     # 镜像点坐标。Y:pd.Series
     Y = y0 + STEP * p_v
     # 把镜像点Y转化为真实点，然后求合法速度区间
@@ -478,3 +547,10 @@ def sec_kill(p_v: pd.Series, y0: int) -> pd.Series:
 # 本函数在对局结束后调用，用于双方分析和保存历史数据
 def summarize(tick:int, winner:str, reason:str, west:RacketData, east:RacketData, ball:BallData, ds:dict):
     return
+
+'''
+# 检查测试样例时使用
+if __name__ == '__main__':
+    import doctest
+    doctest.testmod(verbose=False)
+'''

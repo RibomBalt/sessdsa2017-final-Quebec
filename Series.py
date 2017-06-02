@@ -515,5 +515,4 @@ def sec_kill(p_v: pd.Series, y0: int) -> pd.Series:
 
 if __name__ == '__main__':
     import doctest
-
     doctest.testmod(verbose=False)

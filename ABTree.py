@@ -88,7 +88,8 @@ class NegaMaxTree:
         queue = [self.root]
         node = self.root
         s = ''
-        # 队列不空
+        # 队
+        # 列不空
         while queue:
             node = queue.pop(0)
             if node is None:

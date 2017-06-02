@@ -136,7 +136,7 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
         elif card_i == CARD_AMPL:
             health_change = 918
         elif card_i == CARD_SPIN:
-            health_change = 918
+            health_change = 1000
         else:
             health_change = 0
 

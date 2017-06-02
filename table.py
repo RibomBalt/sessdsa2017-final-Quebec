@@ -382,6 +382,7 @@ class Table:  # 球桌
         player = self.players[self.side]  # 现在side是West
         pos_y, velocity_y = player.serve(self.players[self.op_side].name,
                                          player.datastore)  # 只提供y方向的位置和速度
+        pos_y, velocity_y = int(pos_y), int(velocity_y)
         self.ball = Ball(DIM, Position(BALL_POS[0], pos_y),
                          Vector(BALL_V[0], velocity_y))  # 球的初始化
         self.change_side()  # 换边迎球
@@ -447,8 +448,8 @@ class Table:  # 球桌
             'cards': copy.copy(self.cards)}
         # 调用，返回迎球方的动作
         player_action = player.play(TableData(self.tick, self.tick_step,
-                                              dict_side, dict_op_side,
-                                              dict_ball, dict_card),player.datastore)
+                                              dict_side, dict_op_side, dict_ball, dict_card),
+                                    player.datastore)
         # 设置迎球方的动作，迎球方使用的道具生效要到下一趟
         # 将迎球方动作中的距离速度等值规整化为整数
         player_action.normalize()

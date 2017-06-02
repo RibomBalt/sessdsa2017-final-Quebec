@@ -20,7 +20,7 @@ Clock = pygame.time.Clock()
 
 # 这个参数用来调整时间流逝的速率
 # game_speed=1时, 一来回需要3.6秒
-game_speed = 10
+game_speed = 1
 # 各种参数
 x, y = 18, 10
 s_size = (1024, 600)

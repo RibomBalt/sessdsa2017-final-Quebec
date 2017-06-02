@@ -57,7 +57,7 @@ def play(tb: TableData, ds) -> RacketAction:
     # v_will_hit:list，其元素为list，即为符合击中某道具要求的竖直速度群，v_will_list的元素和cards_al的元素是对应关系
     v_will_hit = ball_fly_to_card(b_d, cards_available)
     for card_i in v_will_hit:
-        p_v.append(pd.Series(card_i))
+        p_v.append(pd.Series(card_i), ignore_index = True)
 
     # y1：Series为到达对方时球的y轴坐标，v1：Series，为到达对方时球的y轴速度
     # op_chosen_v为对方回球的y轴速度，为Series
@@ -78,13 +78,15 @@ def play(tb: TableData, ds) -> RacketAction:
     p_chosen_side = None
     p_chosen_card = None
     p_chosen_v = p_v[index]
-    if p_active_SPIN and p_active_SPIN[index]: # equal if CARD_SPIN in p_cards and p_active_SPIN[index] :下同
+    # TODO 报错：ambiguious
+
+    if p_active_SPIN is not None and p_active_SPIN[index]: # equal if CARD_SPIN in p_cards and p_active_SPIN[index] :下同
         p_chosen_side = 'OPNT'
         p_chosen_card = CARD_SPIN
-    if p_active_AMPL and p_active_AMPL[index]:
+    if p_active_AMPL is not None and p_active_AMPL[index]:
         p_chosen_side = 'OPNT'
         p_chosen_card = CARD_AMPL
-    if p_active_TLPT and p_active_TLPT[index]:
+    if p_active_TLPT is not None and p_active_TLPT[index]:
         p_chosen_side = 'SELF'
         p_chosen_card = CARD_TLPT
 
@@ -100,7 +102,7 @@ def play(tb: TableData, ds) -> RacketAction:
             if CARD_DSPR in p_cards:
                 p_chosen_side = 'SELF'
                 p_chosen_card = CARD_DSPR
-    return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, p_chosen_v - v0, 0, p_chosen_side,p_chosen_card)
+    return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, p_chosen_v - v0, 500000 - tb.ball['position'].y, p_chosen_side,p_chosen_card)
 
 
 def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v: pd.Series, op_chosen_v: pd.Series, y1: pd.Series, v_will_hit):
@@ -124,7 +126,8 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
     # 以下对道具获取路径额外加分，对击中不同的道具的p_v路径给予不同的p_life“加分”，以便估值函数能显示出走这条能获得道具的路更有益
     # 由于最后计算p和op的life差值，op的减分统一加在p_life上，PS：card_i是Card类。
     # TODO 除加减血包外道具加分有待调整
-    for card_i in cards_available:
+    for i in range(len(cards_available)):
+        card_i = cards_available[i]
         if card_i == CARD_INCL or card_i == CARD_DECL:
             # CARD_INCL_PARAM和CARD_DECL_PARAM都为2000
             health_change = 2000
@@ -137,7 +140,16 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
         else:
             health_change = 0
 
-        p_life[p_v[p_v.apply(lambda x: x in v_will_hit)].index] += health_change
+        # saved = p_life
+
+        p_life[p_v[p_v.apply(lambda x: x in v_will_hit[i])].index] += health_change
+
+        # test = (p_life - saved)
+        # print(p_v)
+        # print(p_v.apply(lambda x: x in v_will_hit[i]))
+        # print(p_v[p_v.apply(lambda x: x in v_will_hit[i])].index)
+        # print(health_change)
+        # print(test[test != 0])
     '''
     以下是具体决策结果实现部分
     只考虑变压器、旋转球、瞬移术的使用，优先使用旋转球变压器，属于进攻性策略。
@@ -198,7 +210,8 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
 
     # 按照跑位的距离减少体力值（考虑我方可能使用瞬移卡道具）
     param = 0
-    if p_active_TLPT: # 如果使用瞬移卡，从距离减去CARD_TLPT_PARAM再计算体力值减少
+    # TODO 报错：ambiguious
+    if p_active_TLPT is not None: # 如果使用瞬移卡，从距离减去CARD_TLPT_PARAM再计算体力值减少
         param = CARD_TLPT_PARAM
 
     a = (run_distance.apply(int) - param) ** 2 // FACTOR_DISTANCE ** 2

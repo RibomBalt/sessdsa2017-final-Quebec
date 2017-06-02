@@ -141,14 +141,13 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
             health_change = 0
 
         # saved = p_life
-
-        p_life[p_v[p_v.apply(lambda x: x in v_will_hit[i])].index] += health_change
-
+        p_life[p_v.apply(lambda x: x in v_will_hit[i])] += health_change
+        # print(p_life)
         # test = (p_life - saved)
-        # print(p_v)
+        # # print(p_v)
         # print(p_v.apply(lambda x: x in v_will_hit[i]))
-        # print(p_v[p_v.apply(lambda x: x in v_will_hit[i])].index)
-        # print(health_change)
+        # print(p_life[p_v.apply(lambda x: x in v_will_hit[i])])
+        # # print(health_change)
         # print(test[test != 0])
     '''
     以下是具体决策结果实现部分

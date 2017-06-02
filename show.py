@@ -41,7 +41,6 @@ def readlog(logname):
     d = shelve.open(logname)
     log = d['log']
     winner = d['winner']
-
     reason = d['reason']
     d.close()
     return log, winner, reason

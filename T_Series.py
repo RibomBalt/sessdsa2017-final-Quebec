@@ -127,10 +127,10 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
     # 由于最后计算p和op的life差值，op的减分统一加在p_life上，PS：card_i是Card类。
     # TODO 除加减血包外道具加分有待调整
     for i in range(len(cards_available)):
-        card_i = cards_available[i]
+        card_i = cards_available[i].code
         if card_i == CARD_INCL or card_i == CARD_DECL:
             # CARD_INCL_PARAM和CARD_DECL_PARAM都为2000
-            health_change = 2000
+            health_change = 3000
         elif card_i == CARD_TLPT:
             health_change = 918
         elif card_i == CARD_AMPL:

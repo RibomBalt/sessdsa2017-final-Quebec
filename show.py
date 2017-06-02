@@ -20,7 +20,7 @@ Clock = pygame.time.Clock()
 
 # 这个参数用来调整时间流逝的速率
 # game_speed=1时, 一来回需要3.6秒
-game_speed = 1
+game_speed = 5
 # 各种参数
 x, y = 18, 10
 s_size = (1024, 600)
@@ -191,7 +191,7 @@ def draw_card_history(screen, player_card_history):
         i += image.get_height() + 10
     i = 0
     for card in player_card_history['East']:
-        image = pygame.image.load('%s.png' % card[1].code.lower()).convert_alpha()
+        image = pygame.image.load('%s.png' % card[1].lower()).convert_alpha()
         screen.blit(image, (s_size[0] - 200 - image.get_width() / 2, 170 + i))
         i += image.get_height() + 10
     return

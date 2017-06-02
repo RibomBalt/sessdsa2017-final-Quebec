@@ -176,7 +176,7 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
         return False
 
     # 按照迎球的距离减少体力值（考虑对方之前可能使用变压器道具）
-    p_life -= (bat_distance.apply(abs) ** 2 // FACTOR_DISTANCE ** 2) * (CARD_AMPL_PARAM if op_active_card == CARD_AMPL else 1)
+    p_life -= (abs(bat_distance) ** 2 // FACTOR_DISTANCE ** 2) * (CARD_AMPL_PARAM if op_active_card == CARD_AMPL else 1)
     # 按照给球加速度的指标减少体力值（考虑对方之前可能使用变压器道具）
     p_life -= (player_action_acc.apply(abs) ** 2 // FACTOR_SPEED ** 2) * (CARD_AMPL_PARAM if op_active_card == CARD_AMPL else 1)
 

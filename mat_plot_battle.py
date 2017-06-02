@@ -70,7 +70,11 @@ def paint_life_time_line(name:str):
                 target = w_health
             else:
                 target = e_health
-            health_plot.annotate(item[1].code + ' to ' + Side, (time_line[i], target[i]))
+            if type(item[1]) != str:
+                item_name = item[1].code
+            else:
+                item_name = item[1]
+            health_plot.annotate(item_name + ' to ' + Side, (time_line[i], target[i]))
         # 绘制球的信息图
         ball_plot.scatter(time_line, ball_pos, edgecolor = 'none', c = 'g')
         ball_plot.scatter(time_line, ball_speed, edgecolor = 'none', c = 'm')

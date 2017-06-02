@@ -57,7 +57,7 @@ def play(tb: TableData, ds) -> RacketAction:
     # v_will_hit:list，其元素为list，即为符合击中某道具要求的竖直速度群，v_will_list的元素和cards_al的元素是对应关系
     v_will_hit = ball_fly_to_card(b_d, cards_available)
     for card_i in v_will_hit:
-        p_v.append(pd.Series(card_i), ignore_index = True)
+        p_v = p_v.append(pd.Series(card_i), ignore_index = True)
 
     # y1：Series为到达对方时球的y轴坐标，v1：Series，为到达对方时球的y轴速度
     # op_chosen_v为对方回球的y轴速度，为Series
@@ -127,7 +127,7 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
     # 由于最后计算p和op的life差值，op的减分统一加在p_life上，PS：card_i是Card类。
     # TODO 除加减血包外道具加分有待调整
     for i in range(len(cards_available)):
-        card_i = cards_available[i].code
+        card_i = cards_available[i]
         if card_i == CARD_INCL or card_i == CARD_DECL:
             # CARD_INCL_PARAM和CARD_DECL_PARAM都为2000
             health_change = 3000
@@ -509,7 +509,7 @@ def ball_v_range(y:int or pd.Series) -> tuple:
     v2 = (0 - y) // STEP
     v3 = (-2 * Height - y) // STEP + 1
     # 贴边打的情况算作反弹零次，需要排除
-    # 只有v2才会和y同时取到零，v1不会出现这种情况
+    # 只有v2才会和y同时取到零，v1取到零的时候是不会贴边的
     if type(v2) is int:
         if v2 == 0:
             v2 = -1

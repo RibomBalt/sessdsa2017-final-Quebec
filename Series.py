@@ -160,9 +160,10 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
 
     # 获取我方可能的决策结果 RacketAction(b_d[4], y0 - p_d[1], p_v - v0, middle, p_card_side, p_active_card)
     # 将迎球方动作中的距离速度等值规整化为整数
-    player_action_bat = (y0 - p_d[1]).apply(int) # t0~t1迎球的动作矢量（移动方向及距离）
-    player_action_acc = (p_v - v0).apply(int)  # t1触球加速矢量（加速的方向及速度）
-    player_action_run = middle.apply(int)# t1~t2跑位的动作矢量（移动方向及距离）
+
+    player_action_bat = int(y0 - p_d[1]) # t0~t1迎球的动作矢量（移动方向及距离）
+    player_action_acc = (p_v - v0).apply(int) # t1触球加速矢量（加速的方向及速度）
+    player_action_run = middle.apply(int) # t1~t2跑位的动作矢量（移动方向及距离）
     # player_action_card = (p_card_side, p_active_card)  # 对'SELF'/'OPNT'使用道具
 
     # 球拍的全速是球X方向速度，按照体力值比例下降
@@ -188,7 +189,10 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
     param = 0
     if p_active_TLPT: # 如果使用瞬移卡，从距离减去CARD_TLPT_PARAM再计算体力值减少
         param = CARD_TLPT_PARAM
-    a = (run_distance.apply(abs) - param) ** 2 // FACTOR_DISTANCE ** 2
+
+    a = (int(run_distance) - param) ** 2 // FACTOR_DISTANCE ** 2
+
+
     b = run_distance.apply(sign) - param
     p_life -= a.where(b > 0, 0)
     '''# 作用于int时的代码 
@@ -219,8 +223,9 @@ def op_life_consume(op_d, y0, op_chosen_v, y1, p_active_SPIN, p_active_AMPL)->pd
     # 获取对方可能的决策结果 RacketAction(7200, Ct * (y2 - y0) + y0, op_vy - v2, middle, None, None) 下文中tick没用，随便取一个合法值
     # 将迎球方动作中的距离速度等值规整化为整数
     op_player_action_bat = (Ct * (y2 - y0) + y0).apply(int)  # t0~t1迎球的动作矢量（移动方向及距离）
-    min_op_vy = ball_v_range(y1).apply(min)
-    op_player_action_acc = (op_vy - v2).where(not p_active_SPIN, min_op_vy).apply(int)
+
+    min_op_vy = y1.apply(ball_v_range).apply(min)
+    op_player_action_acc = (op_vy - v2).where(-p_active_SPIN, min_op_vy).apply(int)
     # 这行代码是对我方使用旋转球的处理，相当于是从我们的视角替对方“纠正”了自己的策略
     op_player_action_run = middle.apply(int)  # t1~t2跑位的动作矢量（移动方向及距离）
 
@@ -280,7 +285,7 @@ def op_assume_f(op_v:int, y1: pd.Series, v1: pd.Series, y0:int) ->pd.Series:
     # 对方将球从v1加速至op_v所消耗体力
     op_lose = (((op_v - v1) / FACTOR_SPEED) ** 2).apply(int)
     # 我方将从y0跑位至y0和y2之间的某一点，并到y2处迎球
-    y2 = mirror2real(y1 + 1800 * op_v)[0]
+    y2 = mirror2real(y1 + 1800 * op_v)[0]                          #mirror2real返回值是
     # C为可调试的常数，取值范围0.5-1，
     p_lose = (C * ((y0 - y2) / FACTOR_DISTANCE) ** 2).apply(int)
     return p_lose - op_lose

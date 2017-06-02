@@ -160,7 +160,7 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
 
     # 获取我方可能的决策结果 RacketAction(b_d[4], y0 - p_d[1], p_v - v0, middle, p_card_side, p_active_card)
     # 将迎球方动作中的距离速度等值规整化为整数
-    player_action_bat = (y0 - p_d[1]).apply(int) # t0~t1迎球的动作矢量（移动方向及距离）
+    player_action_bat = int(y0 - p_d[1]).apply(int) # t0~t1迎球的动作矢量（移动方向及距离）
     player_action_acc = (p_v - v0).apply(int)  # t1触球加速矢量（加速的方向及速度）
     player_action_run = middle.apply(int)# t1~t2跑位的动作矢量（移动方向及距离）
     # player_action_card = (p_card_side, p_active_card)  # 对'SELF'/'OPNT'使用道具
@@ -295,7 +295,26 @@ def ball_fly_to(y: int, v: int) -> tuple:
     :param Y: int，镜像点y坐标
     :param count: 与桌碰撞次数，可正可负
     :return: 到达对侧位置位置、速度
+    >>> ball_fly_to(0,50)
+    (90000, 50)
+    >>> ball_fly_to(0,556)
+    (999200, -556)
+    >>> ball_fly_to(200,1111)
+    (0, 1111)
+    >>> ball_fly_to(pd.Series([3000,1600]),pd.Series([1665,-1112]))
+    (0    1000000
+    1          0
+    dtype: int64, 0   -1665
+    1    1112
+    dtype: int64)
+    >>> ball_fly_to(pd.Series([3000,1600]),100)
+    (0    183000
+    1    181600
+    dtype: int64, 0    100
+    1    100
+    dtype: int64)
     """
+    # 已完成测试
     # Y 为没有墙壁时乒乓球到达的位置（镜像点）
     Y = y + v * STEP
     # 把镜像点转化为真实点
@@ -312,7 +331,38 @@ def mirror2real(y_mr: int or np.array or pd.Series) -> tuple:
     可以代入int,np.array,pd.Series等多种类型
     :param y_mr: 镜像点y坐标
     :return: 真实点y坐标数组（范围0-1,000,000），碰撞次数数组
+    >>> mirror2real(0)
+    (0, 1)
+    >>> mirror2real(1000000)
+    (1000000, 1)
+    >>> mirror2real(500000)
+    (500000, 0)
+    >>> mirror2real(3000000)
+    (1000000, 3)
+    >>> mirror2real(2999999)
+    (999999, 2)
+    >>> mirror2real(-1999999)
+    (1, -2)
+    >>> mirror2real(-2000000)
+    (0, 3)
+    >>> mirror2real(pd.Series([0,1000000,500000,3000000,2999998,-1999999,-2000000]))
+    (0          0
+    1    1000000
+    2     500000
+    3    1000000
+    4     999998
+    5          1
+    6          0
+    dtype: int64, 0    1
+    1    1
+    2    0
+    3    3
+    4    2
+    5   -2
+    6    3
+    dtype: int64)
     """
+    # 已完成测试
     if type(y_mr) is int:
         if y_mr % (2 * Height) < Height:
             y_real = y_mr % Height
@@ -352,6 +402,7 @@ def ball_fly_to_card(b_d: tuple, cards_al: list) -> list:
     >>> ball_fly_to_card((-900000, 80000, 1000, 50), [Card('SP', 0.5, Vector(200,10000))])
     [[-78, -100]]
     """
+    # 已完成测试
     v_range = ball_v_range(b_d[2])
     # 吃到序号为i的道具需要的速度（所有可能的速度）保存在v[i]中
     vy_list = [0] * len(cards_al)
@@ -371,8 +422,6 @@ def fly_assistant(b_d: tuple, v_range: tuple, card: Card) -> list:
     :param y0: y0 = b_d[1]，接球时球的纵坐标
     :param vx0: vx0 = b_d[2]，球的水平速度
     :return: 返回一个list，元素为符合击中某道具要求的竖直速度
-    >>> print(fly_assistant((-900000, 80000, 1000, 50), ball_v_range((-900000, 80000, 1000, 50)), Card('SP', 0.5, Vector(200,10000))))
-    [-78, -100]
     """
     x0, y0, vx0 = b_d[0], b_d[1], b_d[2]
     # 满足规则（碰撞1-2次）的速度区间[v3,v2]∪[v1,v0]
@@ -399,7 +448,14 @@ def ball_v_range(y:int) -> tuple:
     :param STEP: 1800 tick
     :param b_d[2]: b_d[2] = tb.ball['position'].y,接球时球的纵坐标
     :return: 可取速度的边界
+    >>> ball_v_range(0)
+    (1666, 556, -1, -1111)
+    >>> ball_v_range(1000000)
+    (1111, 1, -556, -1666)
+    >>> ball_v_range(500000)
+    (1388, 278, -278, -1388)
     """
+    # 已完成测试
     # v0,v1,v2,v3是速度的范围边界:可取[v3,v2]∪[v1,v0]
     v0 = (3 * Height - y) // STEP
     v1 = (1 * Height - y) // STEP + 1
@@ -421,7 +477,7 @@ def sec_kill(p_v: pd.Series, y0: int) -> pd.Series:
     :param y0:int，出射点坐标坐标
     :return: pd.Series  元素为bool类型
     >>> a = sec_kill(pd.Series(range(-1000, 400)), 10)
-    >>> print(a[a].count(), a.count())
+    >>> print(a[a].count(), a.count())                                         
     842 1400
     """
     # 镜像点坐标。Y:pd.Series
@@ -434,3 +490,7 @@ def sec_kill(p_v: pd.Series, y0: int) -> pd.Series:
     op_v = p_v.where(count % 2 == 0, -p_v) # op_v = p_v if (count % 2 == 0) else (- p_v)
     # 经测试，逻辑连接符可以用&|-表示与或非，但是似乎不可以用and,or,not。注意优先级不同，必须加括号
     return -(((op_v >= v_range[3]) & (op_v <= v_range[2])) | ((op_v >= v_range[1]) & (op_v <= v_range[0])))
+
+if __name__ == '__main__':
+    import doctest
+    doctest.testmod(verbose=False)

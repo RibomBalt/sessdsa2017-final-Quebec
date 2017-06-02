@@ -18,7 +18,7 @@ from table import *
 
 # 这个参数用来调整时间流逝的速率
 # game_speed=1时, 一来回需要3.6秒
-game_speed = 1
+game_speed = 3
 pause_speed = 0
 # 各种参数
 x, y = 18, 10

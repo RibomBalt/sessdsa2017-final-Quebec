@@ -66,7 +66,7 @@ def play(tb: TableData, ds) -> RacketAction:
     # 对对方而言，也不等同于体力值，因为是只考虑一小部分的体力估值
     p_life2, p_active_SPIN, p_active_AMPL, p_active_TLPT = p_life_consume(b_d, p_d, op_d, cards_available, p_v, op_chosen_v, y1, v_will_hit)
     # 补充：我的考虑是，如果我方使用旋转球，对方会采取简单反弹（不秒杀）或者最小改变min(ball_v_range)
-    op_life2 = op_life_consume(op_d, y0, op_chosen_v, y1, p_active_SPIN, p_active_AMPL)
+    op_life2 = op_life_consume(op_d, y0, op_chosen_v, y1, v1, p_active_SPIN, p_active_AMPL)
 
     # 获得我方估值函数值中的最大值对应索引
     p_path_assume = (p_life2 - p_life1) - (op_life2 - op_life1)
@@ -74,7 +74,7 @@ def play(tb: TableData, ds) -> RacketAction:
     # 返回具体打球方式
     p_chosen_side = None
     p_chosen_card = None
-    p_chosen_v = (p_v[index] - v0) * (2 if op_active_card == CARD_SPIN else 1) + v0
+    p_chosen_v = p_v[index]
     # TODO 报错：ambiguious
 
     if p_active_SPIN is not None and p_active_SPIN[index]: # equal if CARD_SPIN in p_cards and p_active_SPIN[index] :下同
@@ -99,7 +99,7 @@ def play(tb: TableData, ds) -> RacketAction:
             if CARD_DSPR in p_cards:
                 p_chosen_side = 'SELF'
                 p_chosen_card = CARD_DSPR
-    return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, p_chosen_v - v0, 500000 - tb.ball['position'].y, p_chosen_side,p_chosen_card)
+    return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, (p_chosen_v - v0) * (2 if op_active_card == CARD_SPIN else 1), 500000 - tb.ball['position'].y, p_chosen_side,p_chosen_card)
 
 
 def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v: pd.Series, op_chosen_v: pd.Series, y1: pd.Series, v_will_hit):
@@ -129,11 +129,11 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
             # CARD_INCL_PARAM和CARD_DECL_PARAM都为2000
             health_change = 4000
         elif card_i == CARD_TLPT:
-            health_change = 918
+            health_change = 1918
         elif card_i == CARD_AMPL:
-            health_change = 918
+            health_change = 1918
         elif card_i == CARD_SPIN:
-            health_change = 1000
+            health_change = 3000
         else:
             health_change = 0
 
@@ -156,6 +156,7 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
     y2, v2 = ball_fly_to(y1, op_chosen_v)
 
     # 我方决策跑位到 对方决策后在我方的落点 与 当下位置的中点
+    # TODO 跑位需要修改，加入随机因素，或者张昊的搜索
     middle = (y2 + p_d[1]) // 2
     # TODO 道具的具体使用的阈值调整以及策略变动 注意！这里是道具使用！不是路径上的道具获取！
     # 估值函数里不考虑加血包减血包的使用
@@ -222,7 +223,7 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
     return p_life, p_active_SPIN, p_active_AMPL, p_active_TLPT
 
 
-def op_life_consume(op_d, y0, op_chosen_v, y1, p_active_SPIN, p_active_AMPL)->pd.Series:
+def op_life_consume(op_d, y0, op_chosen_v, y1, v1, p_active_SPIN, p_active_AMPL)->pd.Series:
     """
     根据我方此次决策，算出迎球+加速+跑位的总体力消耗(考虑道具)
     :param p_active_SPIN: Series，不同路径使用CARD_SPIN的情况，元素为bool
@@ -243,12 +244,11 @@ def op_life_consume(op_d, y0, op_chosen_v, y1, p_active_SPIN, p_active_AMPL)->pd
     # 获取对方可能的决策结果 RacketAction(7200, Ct * (y2 - y0) + y0, op_vy - v2, middle, None, None) 下文中tick没用，随便取一个合法值
     # 将迎球方动作中的距离速度等值规整化为整数
     op_player_action_bat = (Ct * (y2 - y0) + y0).apply(int)  # t0~t1迎球的动作矢量（移动方向及距离）
-
-    min_op_vy = y1.apply(ball_v_range).apply(min)
+    min_op_vy = ((Height - y1) // STEP).where(ball_fly_to(y1, v1)[0] > (Height/2), - y1 // STEP)
     if p_active_SPIN is None:
-        op_player_action_acc = min_op_vy.apply(int)
+        op_player_action_acc = op_vy - v1
     else:
-        op_player_action_acc = (op_vy - v2).where((-p_active_SPIN), min_op_vy).apply(int)
+        op_player_action_acc = (op_vy - v1).where((-p_active_SPIN), min_op_vy).apply(int)
     # 这行代码是对我方使用旋转球的处理，相当于是从我们的视角替对方“纠正”了自己的策略
     op_player_action_run = middle.apply(int)  # t1~t2跑位的动作矢量（移动方向及距离）
 
@@ -550,4 +550,8 @@ def summarize(tick:int, winner:str, reason:str, west:RacketData, east:RacketData
 if __name__ == '__main__':
     import doctest
     doctest.testmod(verbose=False)
+    s = pd.Series([1, 2, 3, 4, 5, 6])
+    v1=1
+    print(s.apply(ball_v_range).apply(min))
+    print(s.apply(ball_v_range).apply(lambda x:min(map(lambda j:abs(j-v1),x))))
 '''

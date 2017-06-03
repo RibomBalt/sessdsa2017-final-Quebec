@@ -50,8 +50,7 @@ def play(tb: TableData, ds) -> RacketAction:
     # 我方拥有的道具list,为CardBox类
     p_cards = p_d[2]
     v00, v01, v02, v03 = ball_v_range(y0)
-    p_v = pd.Series([i for i in range(v03,v02,20)] + [j for j in range(v01,v00,20)]) * (CARD_SPIN_PARAM if op_active_card == CARD_SPIN else 1)
-
+    p_v = pd.Series([i for i in range(v03,v02,20)] + [j for j in range(v01,v00,20)])
     # v_will_hit:list，其元素为list，即为符合击中某道具要求的竖直速度群，v_will_list的元素和cards_al的元素是对应关系
     v_will_hit = ball_fly_to_card(b_d, cards_available)
     for card_i in v_will_hit:
@@ -75,7 +74,7 @@ def play(tb: TableData, ds) -> RacketAction:
     # 返回具体打球方式
     p_chosen_side = None
     p_chosen_card = None
-    p_chosen_v = p_v[index]
+    p_chosen_v = (p_v[index] - v0) * (2 if op_active_card == CARD_SPIN else 1) + v0
     # TODO 报错：ambiguious
 
     if p_active_SPIN is not None and p_active_SPIN[index]: # equal if CARD_SPIN in p_cards and p_active_SPIN[index] :下同
@@ -181,7 +180,7 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
     # 将迎球方动作中的距离速度等值规整化为整数
 
     # player_action_bat = int(y0 - p_d[1]) # t0~t1迎球的动作矢量（移动方向及距离）
-    player_action_acc = (p_v - v0).apply(int) # t1触球加速矢量（加速的方向及速度）
+    player_action_acc = ((p_v - v0)* (2 if op_active_card == CARD_SPIN else 1)).apply(int) # t1触球加速矢量（加速的方向及速度）
     player_action_run = middle.apply(int) # t1~t2跑位的动作矢量（移动方向及距离）
     # player_action_card = (p_card_side, p_active_card)  # 对'SELF'/'OPNT'使用道具
 
@@ -198,7 +197,7 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
     # 按照迎球的距离减少体力值（考虑对方之前可能使用变压器道具）
     # p_life -= (abs(bat_distance) ** 2 // FACTOR_DISTANCE ** 2) * (CARD_AMPL_PARAM if op_active_card == CARD_AMPL else 1)
     # 按照给球加速度的指标减少体力值（考虑对方之前可能使用变压器道具）
-    p_life -= (player_action_acc.apply(abs) ** 2 // FACTOR_SPEED ** 2) * (CARD_AMPL_PARAM if op_active_card == CARD_AMPL else 1)
+    p_life -= (player_action_acc ** 2 // FACTOR_SPEED ** 2) * (CARD_AMPL_PARAM if op_active_card == CARD_AMPL else 1)
 
     # 如果指定跑位的距离大于最大速度的距离，则采用最大速度距离
     run_distance = player_action_run.apply(sign) * \

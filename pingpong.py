@@ -85,7 +85,6 @@ import os
 # 取得所有以T_开始文件名的算法文件名
 players = [f[:-3] for f in os.listdir('.') if os.path.isfile(f) and f[-3:] == '.py' and f[:2] == 'T_']
 i = 0
-players = ['T_Series', 'T_Siderplus']
 for west_name in players:
     for east_name in players:
         print('----------------------%s vs %s-------------------------' % (west_name, east_name))

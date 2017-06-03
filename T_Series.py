@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 
 Height = 1000000
-C = 0.67
+C = 0.69
 Ct = 0.85
 STEP = 1800
 
@@ -49,8 +49,6 @@ def play(tb: TableData, ds) -> RacketAction:
     p_life1, op_life1 = p_d[0], op_d[0]
     # 我方拥有的道具list,为CardBox类
     p_cards = p_d[2]
-
-    # TODO 改系数，获得合理的等距v的Series，会用到ball_v_range(y)
     v00, v01, v02, v03 = ball_v_range(y0)
     p_v = pd.Series([i for i in range(v03,v02,20)] + [j for j in range(v01,v00,20)]) * (CARD_SPIN_PARAM if op_active_card == CARD_SPIN else 1)
 
@@ -120,7 +118,7 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
     p_cards = p_d[2]
     p_life = pd.Series(p_d[0],range(op_chosen_v.size))
     # op_ini_pos 对手跑位前位置
-    op_active_card, op_ini_pos = op_d[1], op_d[2]
+    op_active_card, op_ini_pos = op_d[1], b_d[1]
     y0, v0 = b_d[1], b_d[3]
 
     # 以下对道具获取路径额外加分，对击中不同的道具的p_v路径给予不同的p_life“加分”，以便估值函数能显示出走这条能获得道具的路更有益
@@ -130,7 +128,7 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
         card_i = cards_available[i]
         if card_i == CARD_INCL or card_i == CARD_DECL:
             # CARD_INCL_PARAM和CARD_DECL_PARAM都为2000
-            health_change = 3000
+            health_change = 4000
         elif card_i == CARD_TLPT:
             health_change = 918
         elif card_i == CARD_AMPL:

@@ -108,11 +108,11 @@ def play(tb: TableData, ds) -> RacketAction:
     save_catch_pos(tb, ds)
     final_run_pos = get_run_pos(tb, ds)
     # 判断安全区，如果在安全区外，则选择最近的一个安全区。
-    if safe_zone[1] == 1:
+    if safe_zone[1] == 2:
         if not(safe_zone[0][0] < final_run_pos < safe_zone[0][1]):
             final_run_pos = min(safe_zone[0], key = lambda pos: abs(pos - final_run_pos))
-    elif safe_zone[1] == 2:
-        if safe_zone[0][0] < final_run_pos < safe_zone[0][1]:
+    elif safe_zone[1] == 3:
+        if (safe_zone[0][0] < final_run_pos < safe_zone[0][1]):
             final_run_pos = min(safe_zone[0], key = lambda pos: abs(pos - final_run_pos))
 
     return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y,
@@ -520,9 +520,9 @@ def ball_v_range(y:int or pd.Series) -> tuple:
     # 已完成测试
     # v0,v1,v2,v3是速度的范围边界:可取[v3,v2]∪[v1,v0]
     v0 = (3 * Height - y) // STEP
-    v1 = (1 * Height - y) // STEP + 1
+    v1 = (1 * Height - y) // STEP + 2
     v2 = (0 - y) // STEP
-    v3 = (-2 * Height - y) // STEP + 1
+    v3 = (-2 * Height - y) // STEP + 2
     # 贴边打的情况算作反弹零次，需要排除
     # 只有v2才会和y同时取到零，v1取到零的时候是不会贴边的
     if type(v2) is int:
@@ -568,7 +568,8 @@ def get_run_side(tb:TableData):
     if bat_s_max > 1000000:
         return ((0, 1000000), 1)
     elif bat_s_max > 500000:
-        return ((1000000 - bat_s_max, bat_s_max), 2)
+        # 不明原因出现安全区失效
+        return ((1000000 - bat_s_max - 1, bat_s_max + 1), 2)
     else:
         return ((bat_s_max, 1000000 - bat_s_max), 3)
 
@@ -617,10 +618,16 @@ def get_run_pos(tb:TableData, ds:dict):
     :param ds: 
     :return: 
     """
-    catch_list = [data[0] for data in ds['catch']]
+    catch_list = [x_square(data[0]-500000) for data in ds['catch']]
     # 获取我们认为的最佳落点
-    pos = np.average(catch_list, weights = range(1,11)[0:len(catch_list)])
+    pos = 500000 + anti_x_square(np.average(catch_list, weights = [x**1.5 for x in range(1,11)][0:len(catch_list)]))
     return (pos + tb.side['position'].y) // 2
+
+def x_square(x):
+    return x * abs(x)
+
+def anti_x_square(x):
+    return abs(x)**0.5 if x > 0 else -abs(x)**0.5
 
 
 # 对局后保存历史数据函数

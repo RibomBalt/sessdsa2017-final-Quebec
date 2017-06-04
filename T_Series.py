@@ -11,7 +11,6 @@ STEP = 1800
 # ds为函数可以利用的存储字典
 # 函数需要返回球的y坐标，和y方向的速度
 def serve(op_side: str, ds:dict) -> tuple:
-    initial_ds(ds)
     return BALL_POS[1], (1800000 - BALL_POS[1]) // 1800 + 1
 
 # 道具部分代码笔记：
@@ -41,6 +40,8 @@ def play(tb: TableData, ds) -> RacketAction:
     op_d = (tb.op_side["life"], tb.op_side["active_card"], tb.op_side['position'].y)
     # 创建cards元组
     cards = (tb.cards['card_tick'], tb.cards['cards'])
+    # 获取“安全区”坐标范围
+    safe_zone = get_run_side(tb)
     # ——————————————————————————————————————————————————————————————————————————————#
     y0, v0 = b_d[1], b_d[3]
     # cards_available:桌面上现有的道具列表，元素为Card类
@@ -100,7 +101,24 @@ def play(tb: TableData, ds) -> RacketAction:
             if CARD_DSPR in p_cards:
                 p_chosen_side = 'SELF'
                 p_chosen_card = CARD_DSPR
-    return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y, (p_chosen_v - v0) * (2 if op_active_card == CARD_SPIN else 1), 500000 - tb.ball['position'].y, p_chosen_side,p_chosen_card)
+    # 跑位历史初始化
+    if tb.tick <= 1800:
+        initial_ds(ds)
+    # 根据历史，加权进行跑位
+    save_catch_pos(tb, ds)
+    final_run_pos = get_run_pos(tb, ds)
+    # 判断安全区，如果在安全区外，则选择最近的一个安全区。
+    if safe_zone[1] == 1:
+        if not(safe_zone[0][0] < final_run_pos < safe_zone[0][1]):
+            final_run_pos = min(safe_zone[0], key = lambda pos: abs(pos - final_run_pos))
+    elif safe_zone[1] == 2:
+        if safe_zone[0][0] < final_run_pos < safe_zone[0][1]:
+            final_run_pos = min(safe_zone[0], key = lambda pos: abs(pos - final_run_pos))
+
+    return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y,
+                        (p_chosen_v - v0) * (2 if op_active_card == CARD_SPIN else 1),
+                        final_run_pos - tb.ball['position'].y,
+                        p_chosen_side,p_chosen_card)
 
 
 def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v: pd.Series, op_chosen_v: pd.Series, y1: pd.Series, v_will_hit):
@@ -574,16 +592,36 @@ def initial_ds(ds:dict):
     :param ds: 
     :return: 
     """
-    # TODO serve中调用，初始化ds
+    clear_ds(ds)
+    # catch保存对面落点信息
+    ds['catch'] = []
+    return
 
-def save_catch_pos(ds:dict, op:str = None):
+def save_catch_pos(tb:TableData, ds:dict):
     """
     保存对对手的接球点纵坐标
     :param ds: 要保存的字典
     :param op: 
     :return: 
     """
-    # TODO 每局开始时调用，
+    ds['catch'].append((tb.ball['position'].y, tb.side['position'].y))
+    if len(ds['catch']) > 10:
+        # 最大队列长度为10
+        ds['catch'].pop(0)
+    return
+
+def get_run_pos(tb:TableData, ds:dict):
+    """
+    得到跑位点。使用加权平均值，
+    :param tb: 
+    :param ds: 
+    :return: 
+    """
+    catch_list = [data[0] for data in ds['catch']]
+    # 获取我们认为的最佳落点
+    pos = np.average(catch_list, weights = range(1,11)[0:len(catch_list)])
+    return (pos + tb.side['position'].y) // 2
+
 
 # 对局后保存历史数据函数
 # ds为函数可以利用的存储字典

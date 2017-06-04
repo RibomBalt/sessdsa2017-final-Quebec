@@ -149,19 +149,19 @@ def pandas_max(v0, y0, target_range=None, evaluate=op_player_f):
                 target_range = target_range[:-1]
         # 索引也同步增加
         target_range.index += y0 % 1800
-    if evaluate is op_player_f:
-        f = lambda v: evaluate(v, v0, y0)
+    if evaluate == op_player_f:
+        f = lambda v: evaluate((v - y0)//1800, v0, y0)
     else:
         f = evaluate
     values = target_range.apply(f)
     max_v = values.argmax()
     return (max_v - y0) // 1800, values[max_v]
 
-for v0 in V_range:
-    y0 = 10000
+for v0 in range(-2000000, 3000000,1800):
+    y0 = 200000
     # for y0 in range(0,1000000,1800):
     # print((v0-y0)//1800, y0, pandas_max((v0-y0)//1800,y0)[0] - (v0-y0)//1800,sep=',')
-    print(v0, (v0-y0)//1800, y0, pandas_max((v0-y0)//1800,y0)[0] - (v0-y0)//1800,sep=',')
+    print(v0, (v0-y0)//1800, y0, max(pandas_max((v0-y0)//1800, y0, target_range=Series1 + y0 % 1800)[0],pandas_max((v0-y0)//1800, y0, target_range=Series2 + y0 % 1800)[0]) - (v0-y0)//1800,sep=',')
 # t1 = time.time()
 # print(pandas_max(40,10000))
 # t2 = time.time()

@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 Height = 1000000
-C = 0.67
+C = 0.5
 # 固定的V指向区间，默认以V=0时为取余数点。分为两个数组
 V_range1 = np.arange(-1999800, -1800, 3600)
 V_range2 = np.arange(1000800, 2998800, 3600)
@@ -56,6 +56,7 @@ def op_player_f(v, v0, y0):
     op_lose = int(((y2real(y0 - 1800 * v0) - y2real(y0 + 1800 * v)) / FACTOR_DISTANCE) ** 2) * C
 
     return -(lose - op_lose)
+
 
 
 def ball_fly(v, y0):
@@ -176,11 +177,7 @@ def player_f(v, v0, y0):
     v_in, y2 = ball_fly(v, y0)
     # 对方打回的速度
     # TODO 用对方函数算一个最小值出来，修改op_player_f估值为负
-    if v0 < 0:
-        vy = -1 - y0 / 1800 + v0
-    else:
-        vy = 557 - y0 / 1800 + v0
-    v_out = vy
+    # v_out = v_me
     # 打回的位置
     y3 = y2real(y2 + 1800 * v_out)
     # 己方决策函数
@@ -188,7 +185,7 @@ def player_f(v, v0, y0):
     lose = ((v - v0) / FACTOR_SPEED) ** 2 + 0.5 * ((y0 - y3) / FACTOR_DISTANCE) ** 2  # 己方损失
     op_lose = ((v_out - v_in) / FACTOR_SPEED) ** 2 + C * ((y1 - y2) / FACTOR_DISTANCE) ** 2  # 对方损失
     # 返回对方减少 - 我方减少。这个尽可能大
-    return v, op_lose - lose, y3
+    return (v,y3), op_lose - lose
 
 
 def serve(ds):
@@ -212,7 +209,8 @@ def play(tb: TableData, ds: dict) -> RacketAction:
     # v_best = max((pandas_max(v0, y0, Series1), pandas_max(v0, y0, Series2)), key=lambda x: x[1])[0]
     v_best = max((pandas_max(v0, y0, Series1, lambda v: player_f(v, v0, y0)[1]),
                   pandas_max(v0, y0, Series2, lambda v: player_f(v, v0, y0)[1])), key=lambda x: x[1])[0]
-    y2reach = player_f(v_best, v0, y0)[2]
+
+    x_best = player_f(v_best,v0,y0)[0][1]
     # 如果有道具，则对自己使用
     if tb.cards['cards']:
         side, item = 'SELF', tb.cards['cards'].pop(0)
@@ -228,7 +226,7 @@ def play(tb: TableData, ds: dict) -> RacketAction:
 
     return RacketAction(tb.tick, tb.ball['position'].y - tb.side['position'].y,
                         int(v_best - tb.ball['velocity'].y),
-                        (y2reach - tb.ball['position'].y) // 2,
+                        (x_best + tb.ball['position'].y) // 2,
                         side, item)
 
 

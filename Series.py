@@ -25,7 +25,6 @@ def play(tb: TableData, ds) -> RacketAction:
     :param op_chosen_v: Series，对手最终决定的回球方式
     :param p_life1, op_life1: 对方上一轮迎球加速跑位加减血道具生效而我方尚未作出迎球反应时双方体力值
     :param p_life2, op_life2: 决策后双方体力值
-    :param path_assume: Series，我方的估值函数值
     :return: RacketAction，我方最终决定的回球方式
     """
     # 创建ball_data元组
@@ -61,7 +60,8 @@ def play(tb: TableData, ds) -> RacketAction:
     # 计算双方决策后的“体力值”
     # 对于我方而言，不等同于体力值，因为加入了获得道具的“加分”。而且为了避免“吃老本”的情况，没有考虑加减血包的使用。
     # 对对方而言，也不等同于体力值，因为是只考虑一小部分的体力估值
-    p_life2, p_active_SPIN, p_active_AMPL, p_active_TLPT = p_life_consume(b_d, p_d, op_d, cards_available, p_v, op_chosen_v, y1)
+    p_life2, p_active_SPIN, p_active_AMPL, p_active_TLPT = p_life_consume(b_d, p_d, op_d, cards_available, p_v,
+                                                                          op_chosen_v, y1)
     # 补充：我的考虑是，如果我方使用旋转球，对方会采取简单反弹（不秒杀）或者最小改变min(ball_v_range)
     op_life2 = op_life_consume(op_d, y0, op_chosen_v, y1, p_active_SPIN, p_active_AMPL)
 
@@ -72,7 +72,7 @@ def play(tb: TableData, ds) -> RacketAction:
     p_chosen_side = None
     p_chosen_card = None
     p_chosen_v = p_v[index]
-    if p_active_SPIN and p_active_SPIN[index]: # equal if CARD_SPIN in p_cards and p_active_SPIN[index] :下同
+    if p_active_SPIN and p_active_SPIN[index]:  # equal if CARD_SPIN in p_cards and p_active_SPIN[index] :下同
         p_chosen_side = 'OPNT'
         p_chosen_card = CARD_SPIN
     if p_active_AMPL and p_active_AMPL[index]:
@@ -202,7 +202,7 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
     return p_life, p_active_SPIN, p_active_AMPL, p_active_TLPT
 
 
-def op_life_consume(op_d, y0, op_chosen_v, y1, p_active_SPIN, p_active_AMPL)->pd.Series:
+def op_life_consume(op_d, y0, op_chosen_v, y1, p_active_SPIN, p_active_AMPL) -> pd.Series:
     """
     根据我方此次决策，算出迎球+加速+跑位的总体力消耗(考虑道具)
     :param p_active_SPIN: Series，不同路径使用CARD_SPIN的情况，元素为bool
@@ -256,7 +256,7 @@ def op_life_consume(op_d, y0, op_chosen_v, y1, p_active_SPIN, p_active_AMPL)->pd
     return op_life
 
 
-def op_play(y0:int, y1: pd.Series, v1: pd.Series):
+def op_play(y0: int, y1: pd.Series, v1: pd.Series):
     """
     面对(y1,v1)，对手的选择
     :param y1: pd.Series，打到对手底线时球的y轴坐标
@@ -267,12 +267,12 @@ def op_play(y0:int, y1: pd.Series, v1: pd.Series):
     """
     # TODO 改系数，获得合理的等距v的Series
     op_v = pd.Series([1000 * i for i in range(5)])
-    op_assume = (op_v.apply(op_assume_f, y1=y1, v1=v1, y0=y0)).apply(lambda x : x[x.idxmax()],axis = 1)
+    op_assume = (op_v.apply(op_assume_f, y1=y1, v1=v1, y0=y0)).apply(lambda x: x[x.idxmax()], axis=1)
     op_chosen_v = op_v[op_assume.argmax()]
     return op_chosen_v
 
 
-def op_assume_f(op_v:int, y1: pd.Series, v1: pd.Series, y0:int) ->pd.Series:
+def op_assume_f(op_v: int, y1: pd.Series, v1: pd.Series, y0: int) -> pd.Series:
     """
     只会想一层的可爱对手使用的估值函数
     对方只考虑我方为接此球移动消耗体力与每次击球所消耗体力的差值最大
@@ -300,14 +300,33 @@ def ball_fly_to(y: int, v: int) -> tuple:
     :param Y: int，镜像点y坐标
     :param count: 与桌碰撞次数，可正可负
     :return: 到达对侧位置位置、速度
+    >>> ball_fly_to(0,50)
+    (90000, 50)
+    >>> ball_fly_to(0,556)
+    (999200, -556)
+    >>> ball_fly_to(200,1111)
+    (0, 1111)
+    >>> ball_fly_to(pd.Series([3000,1600]),pd.Series([1665,-1112]))
+    (0    1000000
+    1          0
+    dtype: int64, 0   -1665
+    1    1112
+    dtype: int64)
+    >>> ball_fly_to(pd.Series([3000,1600]),100)
+    (0    183000
+    1    181600
+    dtype: int64, 0    100
+    1    100
+    dtype: int64)
     """
+    # 已完成测试
     # Y 为没有墙壁时乒乓球到达的位置（镜像点）
     Y = y + v * STEP
     # 把镜像点转化为真实点
     yi = mirror2real(Y)[0]
     # 计算并更新y轴速度
     count = mirror2real(Y)[1]
-    vi = v * ((count + 1) % 2 * 2 - 1) # 后面这一项，当count为偶数时为1，奇数时为-1
+    vi = v * ((count + 1) % 2 * 2 - 1)  # 后面这一项，当count为偶数时为1，奇数时为-1
     return yi, vi
 
 
@@ -317,7 +336,38 @@ def mirror2real(y_mr: int or np.array or pd.Series) -> tuple:
     可以代入int,np.array,pd.Series等多种类型
     :param y_mr: 镜像点y坐标
     :return: 真实点y坐标数组（范围0-1,000,000），碰撞次数数组
+    >>> mirror2real(0)
+    (0, 1)
+    >>> mirror2real(1000000)
+    (1000000, 1)
+    >>> mirror2real(500000)
+    (500000, 0)
+    >>> mirror2real(3000000)
+    (1000000, 3)
+    >>> mirror2real(2999999)
+    (999999, 2)
+    >>> mirror2real(-1999999)
+    (1, -2)
+    >>> mirror2real(-2000000)
+    (0, 3)
+    >>> mirror2real(pd.Series([0,1000000,500000,3000000,2999998,-1999999,-2000000]))
+    (0          0
+    1    1000000
+    2     500000
+    3    1000000
+    4     999998
+    5          1
+    6          0
+    dtype: int64, 0    1
+    1    1
+    2    0
+    3    3
+    4    2
+    5   -2
+    6    3
+    dtype: int64)
     """
+    # 已完成测试
     if type(y_mr) is int:
         if y_mr % (2 * Height) < Height:
             y_real = y_mr % Height
@@ -357,7 +407,8 @@ def ball_fly_to_card(b_d: tuple, cards_al: list) -> list:
     >>> ball_fly_to_card((-900000, 80000, 1000, 50), [Card('SP', 0.5, Vector(200,10000))])
     [[-78, -100]]
     """
-    v_range = ball_v_range(b_d[2])
+    # 已完成测试
+    v_range = ball_v_range(b_d[1])
     # 吃到序号为i的道具需要的速度（所有可能的速度）保存在v[i]中
     vy_list = [0] * len(cards_al)
     for i in range(len(cards_al)):
@@ -376,9 +427,10 @@ def fly_assistant(b_d: tuple, v_range: tuple, card: Card) -> list:
     :param y0: y0 = b_d[1]，接球时球的纵坐标
     :param vx0: vx0 = b_d[2]，球的水平速度
     :return: 返回一个list，元素为符合击中某道具要求的竖直速度
-    >>> print(fly_assistant((-900000, 80000, 1000, 50), ball_v_range((-900000, 80000, 1000, 50)), Card('SP', 0.5, Vector(200,10000))))
+    >>> fly_assistant((-900000, 80000, 1000, 50), ball_v_range(80000),Card('SP', 0.5, Vector(200,10000)))
     [-78, -100]
     """
+    # 已完成测试
     x0, y0, vx0 = b_d[0], b_d[1], b_d[2]
     # 满足规则（碰撞1-2次）的速度区间[v3,v2]∪[v1,v0]
     v0, v1, v2, v3 = v_range
@@ -398,37 +450,57 @@ def fly_assistant(b_d: tuple, v_range: tuple, card: Card) -> list:
                    map(lambda x: (x - y0) // card_step, y))]
 
 
-def ball_v_range(y:int) -> tuple:
+def ball_v_range(y: int or pd.Series) -> tuple:
     """
     根据我方出射点坐标，算出y轴可取速度的边界值
     :param STEP: 1800 tick
     :param b_d[2]: b_d[2] = tb.ball['position'].y,接球时球的纵坐标
     :return: 可取速度的边界
+    >>> ball_v_range(0)
+    (1666, 556, -1, -1111)
+    >>> ball_v_range(1000000)
+    (1111, 1, -556, -1666)
+    >>> ball_v_range(500000)
+    (1388, 278, -278, -1388)
+    >>> ball_v_range(pd.Series([0,1000000]))
+    (0    1666
+    1    1111
+    dtype: int64, 0    556
+    1      1
+    dtype: int64, 0     -1
+    1   -556
+    dtype: int64, 0   -1111
+    1   -1666
+    dtype: int64)
     """
+    # 已完成测试
     # v0,v1,v2,v3是速度的范围边界:可取[v3,v2]∪[v1,v0]
     v0 = (3 * Height - y) // STEP
     v1 = (1 * Height - y) // STEP + 1
     v2 = (0 - y) // STEP
     v3 = (-2 * Height - y) // STEP + 1
     # 贴边打的情况算作反弹零次，需要排除
-    if v2 == 0:
-        v2 = -1
-    elif v1 == 0:
-        v1 = 1
+    if type(v2) is int:
+        if v2 == 0:
+            v2 = -1
+    elif type(v2) is pd.Series:
+        v2 = v2.where(v2 != 0, -1)
     # 返回一个元组，依次为速度的四个边界值
     return v0, v1, v2, v3
 
 
 def sec_kill(p_v: pd.Series, y0: int) -> pd.Series:
     """
-    根据我方出射点坐标速度，判断对方简单反弹时是否可以秒杀
-    :param p_v:pd.Series，出射点坐标速度
+    根据我方打出球的速度，判断对方简单反弹时是否可以秒杀
+    :param p_v:pd.Series，出射点球的速度
     :param y0:int，出射点坐标坐标
     :return: pd.Series  元素为bool类型
-    >>> a = sec_kill(pd.Series(range(-1000, 400)), 10)
-    >>> print(a[a].count(), a.count())
-    842 1400
+    >>> sec_kill(pd.Series([-1000, 400]), 10)
+    0    False
+    1    False
+    dtype: bool
     """
+    # 已完成测试
     # 镜像点坐标。Y:pd.Series
     Y = y0 + STEP * p_v
     # 把镜像点Y转化为真实点，然后求合法速度区间
@@ -436,6 +508,11 @@ def sec_kill(p_v: pd.Series, y0: int) -> pd.Series:
     # 对方竖直速度范围 v_range：tuple 元素为四个Series
     v_range = ball_v_range(y)
     # 返回True or False，True表示会被秒杀，False表示不会
-    op_v = p_v.where(count % 2 == 0, -p_v) # op_v = p_v if (count % 2 == 0) else (- p_v)
+    op_v = p_v.where(count % 2 == 0, -p_v)  # op_v = p_v if (count % 2 == 0) else (- p_v)
     # 经测试，逻辑连接符可以用&|-表示与或非，但是似乎不可以用and,or,not。注意优先级不同，必须加括号
     return -(((op_v >= v_range[3]) & (op_v <= v_range[2])) | ((op_v >= v_range[1]) & (op_v <= v_range[0])))
+
+
+if __name__ == '__main__':
+    import doctest
+    doctest.testmod(verbose=False)

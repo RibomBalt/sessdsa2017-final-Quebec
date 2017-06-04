@@ -17,7 +17,7 @@ RACKET_LIFE = 100000
 # 迎球和跑位扣减距离除以系数的平方（LIFE=0-2500)
 FACTOR_DISTANCE = 20000
 # 加速则扣减速度除以系数结果的平方（LIFE=0-2500)
-FACTOR_SPEED = 20
+FACTOR_SPEED = 12
 # 游戏方代码
 PL = {'West': 'W', 'East': 'E'}
 # 游戏结束原因代码

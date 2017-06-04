@@ -11,6 +11,7 @@ STEP = 1800
 # ds为函数可以利用的存储字典
 # 函数需要返回球的y坐标，和y方向的速度
 def serve(op_side: str, ds:dict) -> tuple:
+    initial_ds(ds)
     return BALL_POS[1], (1800000 - BALL_POS[1]) // 1800 + 1
 
 # 道具部分代码笔记：
@@ -544,6 +545,7 @@ def get_run_side(tb:TableData):
     :param tb: 桌面数据
     :return: (跑位边界值元组, 当前状态)。1表示55500以上，无死角；2表示27700-55500，回中无死角；3表示以下，回中也有死角。
     """
+    # TODO 每局开始时调用，获取战场进度
     bat_s_max = int((tb.side['life'] / RACKET_LIFE) * BALL_V[0]) * 1800
     if bat_s_max > 1000000:
         return ((0, 1000000), 1)
@@ -565,6 +567,23 @@ def clear_ds(ds:dict, *args):
                 ds.pop(key)
     else:
         ds.clear()
+
+def initial_ds(ds:dict):
+    """
+    初始化ds的
+    :param ds: 
+    :return: 
+    """
+    # TODO serve中调用，初始化ds
+
+def save_catch_pos(ds:dict, op:str = None):
+    """
+    保存对对手的接球点纵坐标
+    :param ds: 要保存的字典
+    :param op: 
+    :return: 
+    """
+    # TODO 每局开始时调用，
 
 # 对局后保存历史数据函数
 # ds为函数可以利用的存储字典

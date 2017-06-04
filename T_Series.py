@@ -207,7 +207,6 @@ def p_life_consume(b_d:tuple, p_d:tuple, op_d:tuple, cards_available: list, p_v:
 
     # 按照跑位的距离减少体力值（考虑我方可能使用瞬移卡道具）
     param = 0
-    # TODO 报错：ambiguious
     if p_active_TLPT is not None: # 如果使用瞬移卡，从距离减去CARD_TLPT_PARAM再计算体力值减少
         param = CARD_TLPT_PARAM
 
@@ -538,6 +537,20 @@ def sec_kill(p_v: pd.Series, y0: int) -> pd.Series:
     op_v = p_v.where(count % 2 == 0, -p_v) # op_v = p_v if (count % 2 == 0) else (- p_v)
     # 经测试，逻辑连接符可以用&|-表示与或非，但是似乎不可以用and,or,not。注意优先级不同，必须加括号
     return -(((op_v >= v_range[3]) & (op_v <= v_range[2])) | ((op_v >= v_range[1]) & (op_v <= v_range[0])))
+
+def get_run_side(tb:TableData):
+    """
+    获取本次跑位的边界点位置
+    :param tb: 桌面数据
+    :return: (跑位边界值元组, 当前状态)。1表示55500以上，无死角；2表示27700-55500，回中无死角；3表示以下，回中也有死角。
+    """
+    bat_s_max = int((tb.side['life'] / RACKET_LIFE) * BALL_V[0]) * 1800
+    if bat_s_max > 1000000:
+        return ((0, 1000000), 1)
+    elif bat_s_max > 500000:
+        return ((1000000 - bat_s_max, bat_s_max), 2)
+    else:
+        return ((bat_s_max, 1000000 - bat_s_max), 3)
 
 # 对局后保存历史数据函数
 # ds为函数可以利用的存储字典

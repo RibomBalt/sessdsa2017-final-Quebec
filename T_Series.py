@@ -552,6 +552,20 @@ def get_run_side(tb:TableData):
     else:
         return ((bat_s_max, 1000000 - bat_s_max), 3)
 
+def clear_ds(ds:dict, *args):
+    """
+    用于在回合开始时对ds进行初始化
+    :param ds: 传入ds字典
+    :param args: 需要清除的Key值。如果为空，则默认为回到空字典。
+    :return: 
+    """
+    if args:
+        for key in args:
+            if key in ds:
+                ds.pop(key)
+    else:
+        ds.clear()
+
 # 对局后保存历史数据函数
 # ds为函数可以利用的存储字典
 # 本函数在对局结束后调用，用于双方分析和保存历史数据
